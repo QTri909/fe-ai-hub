@@ -14,6 +14,13 @@ export const routes: RouteObject[] = [
         },
       },
       {
+        path: ROUTES.OAUTH2_CALLBACK,
+        lazy: async () => {
+          const { GoogleCallbackPage } = await import('@/pages/auth');
+          return { Component: GoogleCallbackPage };
+        },
+      },
+      {
         path: '*',
         lazy: async () => {
           const { NotFoundPage } = await import('@/pages/404');

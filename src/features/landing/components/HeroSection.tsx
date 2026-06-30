@@ -12,11 +12,11 @@ export const HeroSection = () => {
         Eliminate manual bug reporting. Trigger test suites on code commits, catch regressions, and let AI-driven agents log rich Jira tickets with full stack traces and screenshots automatically.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 mb-16">
-        <button className="flex items-center gap-2 bg-primary text-on-primary px-6 py-4 rounded font-bold hover:brightness-110 transition-all active:scale-95">
+        <button className="cursor-pointer flex items-center gap-2 bg-primary text-on-primary px-6 py-4 rounded font-bold hover:brightness-110 transition-all active:scale-95">
           <span className="material-symbols-outlined icon-fill">play_arrow</span>
           Watch Demo
         </button>
-        <button className="flex items-center gap-2 border border-surface-variant bg-surface-container-low text-on-surface px-6 py-4 rounded hover:border-primary hover:text-primary transition-all active:scale-95">
+        <button className="cursor-pointer flex items-center gap-2 border border-surface-variant bg-surface-container-low text-on-surface px-6 py-4 rounded hover:border-primary hover:text-primary transition-all active:scale-95">
           Explore Docs
         </button>
       </div>

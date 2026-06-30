@@ -7,4 +7,5 @@ export const axiosConfig = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
+  withCredentials: true,
 };
