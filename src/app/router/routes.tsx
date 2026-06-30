@@ -8,7 +8,10 @@ export const routes: RouteObject[] = [
     children: [
       {
         path: ROUTES.HOME,
-        element: <Navigate to={ROUTES.DASHBOARD} replace />,
+        lazy: async () => {
+          const { LandingPage } = await import('@/pages/landing');
+          return { Component: LandingPage };
+        },
       },
       {
         path: '*',

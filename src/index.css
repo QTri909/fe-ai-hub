@@ -1,12 +1,127 @@
 @import "tailwindcss";
 
+@theme {
+  --color-secondary-fixed-dim: #adc6ff;
+  --color-on-secondary-fixed: #001a42;
+  --color-outline-variant: #494454;
+  --color-on-secondary: #002e6a;
+  --color-on-tertiary-fixed-variant: #005236;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-inverse-surface: #dae2fd;
+  --color-surface-container: #171f33;
+  --color-surface-container-low: #131b2e;
+  --color-inverse-on-surface: #283044;
+  --color-primary-fixed: #e9ddff;
+  --color-on-error: #690005;
+  --color-primary-container: #a078ff;
+  --color-secondary-container: #0566d9;
+  --color-surface-variant: #2d3449;
+  --color-surface: #0b1326;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-primary: #d0bcff;
+  --color-secondary: #adc6ff;
+  --color-on-tertiary-fixed: #002113;
+  --color-on-secondary-container: #e6ecff;
+  --color-surface-container-highest: #2d3449;
+  --color-on-primary-fixed-variant: #5516be;
+  --color-error-container: #93000a;
+  --color-on-surface: #dae2fd;
+  --color-inverse-primary: #6d3bd7;
+  --color-primary-fixed-dim: #d0bcff;
+  --color-surface-container-high: #222a3d;
+  --color-surface-container-lowest: #060e20;
+  --color-on-surface-variant: #cbc3d7;
+  --color-on-tertiary-container: #00311f;
+  --color-on-tertiary: #003824;
+  --color-on-primary: #3c0091;
+  --color-on-primary-fixed: #23005c;
+  --color-on-background: #dae2fd;
+  --color-outline: #958ea0;
+  --color-surface-tint: #d0bcff;
+  --color-surface-bright: #31394d;
+  --color-error: #ffb4ab;
+  --color-on-error-container: #ffdad6;
+  --color-on-primary-container: #340080;
+  --color-secondary-fixed: #d8e2ff;
+  --color-tertiary: #4edea3;
+  --color-on-secondary-fixed-variant: #004395;
+  --color-tertiary-container: #00a572;
+  --color-background: #0b1326;
+  --color-surface-dim: #0b1326;
+
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  --spacing-gutter: 24px;
+  --spacing-container-max: 1440px;
+
+  --font-headline-md: Geist, sans-serif;
+  --font-headline-lg-mobile: Geist, sans-serif;
+  --font-display: Geist, sans-serif;
+  --font-headline-lg: Geist, sans-serif;
+  --font-body-md: Geist, sans-serif;
+  --font-body-lg: Geist, sans-serif;
+  --font-label-md: Geist, sans-serif;
+  --font-title-lg: Geist, sans-serif;
+  --font-code: "JetBrains Mono", monospace;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 600;
+  
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-lg-mobile--font-weight: 600;
+  
+  --text-display: 48px;
+  --text-display--line-height: 56px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+  
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+  
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--font-weight: 400;
+  
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+  
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 500;
+  
+  --text-title-lg: 20px;
+  --text-title-lg--line-height: 28px;
+  --text-title-lg--font-weight: 500;
+  
+  --text-code: 13px;
+  --text-code--line-height: 18px;
+  --text-code--font-weight: 400;
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-flow: flow 2s linear infinite;
+
+  @keyframes flow {
+    0% { stroke-dashoffset: 24; }
+    100% { stroke-dashoffset: 0; }
+  }
+}
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Geist, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
-  background-color: #0b1326;
+  background-color: var(--color-surface, #0b1326);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -34,4 +149,18 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #494454;
+}
+
+/* Border Glow Effect */
+.hover-glow:hover {
+  border-color: var(--color-primary-container, #a078ff);
+  box-shadow: 0 0 10px rgba(160, 120, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+.icon-fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
