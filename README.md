@@ -1,38 +1,64 @@
-# 🚀 React + TypeScript + Vite Project
+# JiraAutoTest (Frontend)
 
-Welcome to the project! This document provides detailed instructions on how to set up the environment and run the project using **pnpm**.
+JiraAutoTest is a high-performance web application designed to automate QA workflows, synchronize test results, and auto-create rich Jira tickets directly on test failures.
 
----
+This repository hosts the frontend application built with **React 19 + TypeScript + Vite + TailwindCSS v4**.
 
-## 📋 Prerequisites
-* **Node.js**: **LTS v18+** or newer is highly recommended.
-* Check your current Node.js version by running: `node -v`
+## Tech Stack
 
----
+*   **Core**: React 19, TypeScript 6.0, Vite 8.1
+*   **Routing**: React Router v7 (Library Mode)
+*   **State Management**: Zustand 5.0
+*   **Data Fetching**: TanStack Query (React Query) v5
+*   **HTTP Client**: Axios 1.18
+*   **Form Management**: React Hook Form, Zod
+*   **Styling**: TailwindCSS v4
+*   **Testing**: Vitest, React Testing Library, Mock Service Worker (MSW)
+*   **Linter & Formatter**: ESLint, Prettier
 
-## 🛠️ Getting Started
+## Architectural Principles
 
-### 1. Install `pnpm` (If not already installed)
+The application is structured following a **Feature-Driven Modular Architecture**. Deep imports are forbidden. Access constraints are enforced to maintain logical boundaries and code scalability.
+
+For detailed guidelines, see the documentation under `docs/`:
+*   [docs/Architecture.md](file:///e:/University/Subjects/MSS/JiraProject/fe_ai_hub/docs/Architecture.md)
+*   [docs/FolderRules.md](file:///e:/University/Subjects/MSS/JiraProject/fe_ai_hub/docs/FolderRules.md)
+*   [docs/CodingConvention.md](file:///e:/University/Subjects/MSS/JiraProject/fe_ai_hub/docs/CodingConvention.md)
+
+## Development Quickstart
+
+### Prerequisites
+*   Node.js (LTS version recommended)
+*   pnpm (v11+)
+### Install `pnpm` (If not already installed)
 This project uses **pnpm** to manage dependencies for optimal speed and disk space. If you don't have it installed yet, run this global command:
 > **npm install -g pnpm**
 
-### 2. Install Dependencies
-Navigate to the root directory of the project (where `package.json` is located) and install the required packages:
-> **pnpm install**
+### Installation
+```bash
+# Clone the repository
+pnpm install
+```
 
-### 3. Run the Development Server
-Once the installation is complete, start the local development server:
-> **pnpm dev**
+### Running Local Dev Server
+```bash
+# Copy and configure environment variables
+cp .env.example .env
 
-💡 **Local Access Info:** The terminal will display the local server address. Typically, you can access the project at: 👉 **http://localhost:5173** (Hold `Ctrl` and click the link in your terminal).
+# Run development server
+pnpm run dev
+```
 
----
+### Testing
+```bash
+# Run unit and integration tests (Vitest)
+pnpm run test
 
-## 🧰 Available Scripts
-* **pnpm dev** : Starts the local development server for coding and testing.
-* **pnpm build** : Compiles and optimizes the source code for the Production environment (outputs to the `dist` folder).
-* **pnpm lint** : Checks for syntax errors and formats the code using ESLint.
-* **pnpm preview** : Locally previews the Production build to test before deploying.
+# Run tests in watch mode
+pnpm run test:watch
+```
 
----
-Happy coding! 🎉
+### Building for Production
+```bash
+pnpm run build
+```
