@@ -34,7 +34,7 @@ export const GoogleCallbackPage = () => {
           httpClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
           
           // Redirect cleanly to dashboard
-          navigate(ROUTES.DASHBOARD, { replace: true });
+          navigate(ROUTES.WORKSPACE, { replace: true });
         } else {
           throw new Error('Invalid response');
         }

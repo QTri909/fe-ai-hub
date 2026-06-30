@@ -38,7 +38,7 @@ export const LoginPage = () => {
           const { accessToken } = response.data;
           setAccessToken(accessToken);
           httpClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-          navigate(ROUTES.DASHBOARD, { replace: true });
+          navigate(ROUTES.WORKSPACE, { replace: true });
         } else {
           setErrorMsg('Invalid login response');
         }

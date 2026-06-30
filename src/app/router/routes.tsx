@@ -51,6 +51,13 @@ export const routes: RouteObject[] = [
           return { Component: DashboardPage };
         },
       },
+      {
+        path: ROUTES.WORKSPACE,
+        lazy: async () => {
+          const { WorkspacePage } = await import('@/pages/workspace');
+          return { Component: WorkspacePage };
+        },
+      },
     ],
   },
 ];

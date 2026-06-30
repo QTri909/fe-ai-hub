@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   VITE_APP_NAME: z.string().default('JiraAutoTest'),
-  VITE_API_URL: z.string().url().default('http://localhost:8080/api'),
+  VITE_API_URL: z.string().url().default('http://localhost:8080'),
   VITE_TIMEOUT: z.number().default(15000),
   VITE_ENABLE_LOG: z.boolean().default(true),
   MODE: z.string().default('development'),
@@ -11,7 +11,7 @@ const envSchema = z.object({
 });
 
 const getEnv = () => {
-  const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
   const rawTimeout = import.meta.env.VITE_TIMEOUT 
     ? parseInt(import.meta.env.VITE_TIMEOUT, 10) 
     : 15000;
