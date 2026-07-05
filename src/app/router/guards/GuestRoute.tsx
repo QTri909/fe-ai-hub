@@ -6,7 +6,7 @@ export const GuestRoute = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.DASHBOARD} replace />;
+    return <Navigate to={ROUTES.WORKSPACE_LIST} replace />;
   }
 
   return <Outlet />;

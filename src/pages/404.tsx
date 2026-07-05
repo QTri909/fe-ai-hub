@@ -11,11 +11,11 @@ export const NotFoundPage = () => {
           The page you are looking for does not exist or has been moved.
         </p>
         <div className="mt-6">
-          <Link
-            to={ROUTES.DASHBOARD}
-            className="rounded bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 active:scale-95"
+          <Link 
+            to={ROUTES.WORKSPACE_LIST}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors inline-flex items-center gap-2"
           >
-            Go to Dashboard
+            Go to Workspaces
           </Link>
         </div>
       </div>
