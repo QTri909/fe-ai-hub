@@ -67,20 +67,20 @@ export const setupInterceptors = (axiosInstance: AxiosInstance): void => {
         anyRequest._retry = true;
         isRefreshing = true;
 
-        const { refreshToken, setTokens, clearTokens } = useAuthStore.getState();
+        const { accessToken, setAccessToken, clearTokens } = useAuthStore.getState();
 
-        if (refreshToken) {
+        if (accessToken) {
           try {
             logger.info('Access token expired. Requesting refresh...');
-            // Direct request for token refresh
-            const response = await axiosInstance.post('/auth/refresh', {
-              refreshToken,
+            // Direct request for token refresh via Cookie
+            const response = await axiosInstance.post('/auth-service/api/v1/auth/refresh', {}, {
+              withCredentials: true
             });
 
             // Extract tokens from expected standard response structure
-            const responseData = response.data as { data: { accessToken: string; refreshToken: string } };
-            const { accessToken: newAccessToken, refreshToken: newRefreshToken } = responseData.data;
-            setTokens({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+            const responseData = response.data as { accessToken: string };
+            const newAccessToken = responseData.accessToken;
+            setAccessToken(newAccessToken);
 
             processQueue(null, newAccessToken);
             isRefreshing = false;
