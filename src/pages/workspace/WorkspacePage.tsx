@@ -6,13 +6,32 @@ import { useAuthStore } from '@/core/store/auth.store';
 
 export const WorkspacePage = () => {
   const navigate = useNavigate();
-  const logout = useAuthStore((state) => state.logout);
+  const clearTokens = useAuthStore((state) => state.clearTokens);
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [jiraSite, setJiraSite] = useState('');
   const [email, setEmail] = useState('');
   const [apiToken, setApiToken] = useState('');
   const [showToken, setShowToken] = useState(false);
+
+  // Auth state
+  const [userEmail, setUserEmail] = useState<string>('Loading...');
+  const [userId, setUserId] = useState<string>('');
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const { authApi } = await import('@/features/auth/api/auth.api');
+        const user = await authApi.getMe();
+        setUserEmail(user.email);
+        setUserId(user.id);
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+        setUserEmail('Guest');
+      }
+    };
+    fetchUser();
+  }, []);
 
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
@@ -26,12 +45,12 @@ export const WorkspacePage = () => {
   }, [workspaceName, jiraSite, email, apiToken]);
 
   const handleLogout = () => {
-    logout();
+    clearTokens();
     navigate(ROUTES.LOGIN);
   };
 
-  const handleTestConnection = async () => {
-    if (!isFormValid) return;
+  const handleCreateWorkspace = async () => {
+    if (!isFormValid || !userId) return;
     setIsTesting(true);
     setErrorMsg('');
     setTestSuccess(null);
@@ -39,29 +58,28 @@ export const WorkspacePage = () => {
     const fullJiraUrl = `https://${jiraSite}.atlassian.net`;
 
     try {
-      const response = await httpClient.post('/integration-service/api/v1/jira/connection', {
+      const { workspaceApi } = await import('@/features/workspace/api/workspace.api');
+      await workspaceApi.createWorkspace({
+        name: workspaceName,
+        description: '',
         jiraUrl: fullJiraUrl,
         email,
-        apiToken
+        apiToken,
+        ownerId: userId
       });
 
-      if (response.status === 200) {
-        setTestSuccess(true);
-        // After successful connection, the backend returns status PENDING/CONNECTED
-        // Ideally we redirect to dashboard after a delay or user clicks "Create Workspace"
-      }
+      setTestSuccess(true);
+      // Navigate to workspace list
+      setTimeout(() => {
+        navigate(ROUTES.WORKSPACE_LIST);
+      }, 1000);
     } catch (err: any) {
       console.error(err);
       setTestSuccess(false);
-      setErrorMsg(err.response?.data?.message || err.message || 'Connection failed');
+      setErrorMsg(err.response?.data?.message || err.message || 'Failed to create workspace or invalid credentials');
     } finally {
       setIsTesting(false);
     }
-  };
-
-  const handleCreateWorkspace = () => {
-    // Navigate to dashboard for now, since connection is already initiated
-    navigate(ROUTES.DASHBOARD);
   };
 
   return (
@@ -77,15 +95,28 @@ export const WorkspacePage = () => {
           <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">Security</a>
         </nav>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-label-md">ME</div>
-            <button 
-              onClick={handleLogout}
-              className="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors px-4 py-2 flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-base">logout</span>
-              Logout
-            </button>
+          <div className="relative group cursor-pointer">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-label-md ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all">
+                ME
+              </div>
+            </div>
+            
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 top-full mt-2 w-56 bg-surface-container-high border border-outline-variant/50 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden translate-y-2 group-hover:translate-y-0">
+              <div className="px-4 py-3 border-b border-outline-variant/30 bg-surface/50">
+                <div className="text-sm text-on-surface font-medium truncate">
+                  {userEmail}
+                </div>
+              </div>
+              <div 
+                className="px-4 py-3 text-sm font-medium text-error hover:bg-error-container/20 transition-colors flex items-center gap-2 cursor-pointer"
+                onClick={handleLogout}
+              >
+                <span className="material-symbols-outlined text-[18px]">logout</span>
+                Sign out
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -177,27 +208,19 @@ export const WorkspacePage = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <div className="flex flex-col pt-4">
                   <button 
-                    onClick={handleTestConnection}
+                    onClick={handleCreateWorkspace}
                     disabled={!isFormValid || isTesting}
-                    className="flex items-center justify-center gap-2 px-6 py-3 border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface hover:bg-surface-variant transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
+                    className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-[#a078ff] to-[#6d3bd7] text-on-primary font-bold font-body-md text-body-md transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:shadow-[0_0_15px_rgba(160,120,255,0.4)] disabled:hover:shadow-none flex items-center justify-center gap-2"
                     type="button"
                   >
                     {isTesting ? (
-                      <span className="w-5 h-5 border-2 border-on-surface border-t-transparent rounded-full animate-spin"></span>
+                      <span className="w-5 h-5 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></span>
                     ) : (
-                      <span className="material-symbols-outlined text-[20px]">power</span>
+                      <span className="material-symbols-outlined text-[20px]">add_circle</span>
                     )}
-                    Test Connection
-                  </button>
-                  <button 
-                    onClick={handleCreateWorkspace}
-                    disabled={!testSuccess}
-                    className="flex-grow px-6 py-3 rounded-lg bg-gradient-to-r from-[#a078ff] to-[#6d3bd7] text-on-primary font-bold font-body-md text-body-md transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:shadow-[0_0_15px_rgba(160,120,255,0.4)] disabled:hover:shadow-none"
-                    type="button"
-                  >
-                    Enter Workspace
+                    Create Workspace
                   </button>
                 </div>
               </form>
