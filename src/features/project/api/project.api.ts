@@ -17,5 +17,10 @@ export const projectApi = {
   syncProjects: async (workspaceId: string): Promise<Project[]> => {
     const response = await httpClient.post<Project[]>(`/core-management-service/api/v1/workspaces/${workspaceId}/projects/sync`);
     return response.data;
+  },
+
+  syncProjectRequirements: async (workspaceId: string, projectKey: string): Promise<any[]> => {
+    const response = await httpClient.post<any[]>(`/core-management-service/api/v1/workspaces/${workspaceId}/projects/${projectKey}/requirements/sync`);
+    return response.data;
   }
 };

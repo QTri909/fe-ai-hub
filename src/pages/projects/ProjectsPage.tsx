@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWorkspaceStore } from '@/core/store/workspace.store';
 import { projectApi } from '@/features/project/api/project.api';
 import type { Project } from '@/features/project/types/project.types';
+import { DataMappingDialog } from './DataMappingDialog';
+import { ROUTES } from '@/core/constants';
 
 export const ProjectsPage = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [mappingProject, setMappingProject] = useState<Project | null>(null);
   const activeWorkspace = useWorkspaceStore(state => state.activeWorkspace);
 
   const fetchProjects = async () => {
@@ -147,7 +152,21 @@ export const ProjectsPage = () => {
                   <span className="w-2 h-2 rounded-full bg-outline"></span>
                   <span className="text-[12px] text-on-surface-variant">Never synced</span>
                 </div>
-                <button className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer">View Details</button>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setMappingProject(project)}
+                    className="text-xs font-bold text-tertiary hover:underline transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">schema</span>
+                    Data Mapping
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/projects/${project.id}`)}
+                    className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer"
+                  >
+                    View Details
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -168,6 +187,14 @@ export const ProjectsPage = () => {
           </span>
         </div>
       </div>
+      
+      {mappingProject && (
+        <DataMappingDialog
+          projectId={mappingProject.id}
+          projectName={mappingProject.name}
+          onClose={() => setMappingProject(null)}
+        />
+      )}
     </div>
   );
 };

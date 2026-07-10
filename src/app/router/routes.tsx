@@ -65,32 +65,76 @@ export const routes: RouteObject[] = [
               return { Component: ProjectsPage };
             },
           },
+        ]
+      },
+      {
+        path: '/projects/:projectId',
+        lazy: async () => {
+          const { ProjectLayout } = await import('@/components/layout/ProjectLayout');
+          return { Component: ProjectLayout };
+        },
+        children: [
           {
-            path: ROUTES.REQUIREMENTS,
+            index: true,
+            lazy: async () => {
+              const { ProjectDashboardPage } = await import('@/pages/projects/ProjectDashboardPage');
+              return { Component: ProjectDashboardPage };
+            },
+          },
+          {
+            path: 'requirements',
             lazy: async () => {
               const { RequirementsPage } = await import('@/pages/requirements/RequirementsPage');
               return { Component: RequirementsPage };
             },
           },
           {
-            path: ROUTES.REQUIREMENTS + '/:id/generate',
+            path: 'requirements/:id/generate',
             lazy: async () => {
               const { TestGenerationWizard } = await import('@/pages/test-gen/TestGenerationWizard');
               return { Component: TestGenerationWizard };
             },
           },
           {
-            path: ROUTES.TEST_CASES,
+            path: 'requirements/:id/test-cases',
             lazy: async () => {
               const { TestCaseRepository } = await import('@/pages/test-cases/TestCaseRepository');
               return { Component: TestCaseRepository };
             },
           },
           {
-            path: ROUTES.TEST_RUNNER,
+            path: 'test-cases',
+            lazy: async () => {
+              const { TestCaseRepository } = await import('@/pages/test-cases/TestCaseRepository');
+              return { Component: TestCaseRepository };
+            },
+          },
+          {
+            path: 'test-suites',
+            lazy: async () => {
+              const { TestSuiteManagementPage } = await import('@/pages/test-suites/TestSuiteManagementPage');
+              return { Component: TestSuiteManagementPage };
+            },
+          },
+          {
+            path: 'test-runner',
             lazy: async () => {
               const { TestRunnerPage } = await import('@/pages/execution/TestRunnerPage');
               return { Component: TestRunnerPage };
+            },
+          },
+          {
+            path: 'test-runs',
+            lazy: async () => {
+              const { TestRunsPage } = await import('@/pages/execution/TestRunsPage');
+              return { Component: TestRunsPage };
+            },
+          },
+          {
+            path: 'test-runs/:runId',
+            lazy: async () => {
+              const { TestRunDetailsPage } = await import('@/pages/execution/TestRunDetailsPage');
+              return { Component: TestRunDetailsPage };
             },
           },
         ]

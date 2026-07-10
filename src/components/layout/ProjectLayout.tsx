@@ -1,20 +1,23 @@
 import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/core/store/auth.store';
 import { useWorkspaceStore } from '@/core/store/workspace.store';
 import { ROUTES } from '@/core/constants';
-import { useNavigate } from 'react-router-dom';
 
-const navItems = [
-  { name: 'Overview', path: '/dashboard', icon: 'dashboard' },
-  { name: 'Projects', path: '/projects', icon: 'folder_copy' },
-];
-
-export const AppLayout = () => {
+export const ProjectLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
   const clearTokens = useAuthStore((state) => state.clearTokens);
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+
+  const navItems = [
+    { name: 'Dashboard', path: `/projects/${projectId}`, icon: 'dashboard', end: true },
+    { name: 'Requirements', path: `/projects/${projectId}/requirements`, icon: 'list_alt' },
+    { name: 'Test Cases', path: `/projects/${projectId}/test-cases`, icon: 'checklist' },
+    { name: 'Test Suites', path: `/projects/${projectId}/test-suites`, icon: 'biotech' },
+    { name: 'AI Agents', path: `/projects/${projectId}/test-runner`, icon: 'smart_toy' },
+  ];
 
   // If no active workspace, redirect to workspace list
   React.useEffect(() => {
@@ -49,8 +52,17 @@ export const AppLayout = () => {
         </div>
 
         <nav className="flex-1 space-y-1">
+          <button 
+            onClick={() => navigate(ROUTES.PROJECTS)}
+            className="w-full flex items-center gap-3 px-4 py-3 mb-2 text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 border-b border-outline-variant/30"
+          >
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            <span className="font-label-md text-xs">Back to Projects</span>
+          </button>
           {navItems.map((item) => {
-            const isActive = location.pathname.startsWith(item.path);
+            const isActive = item.end 
+              ? location.pathname === item.path
+              : location.pathname.startsWith(item.path);
             return (
               <Link
                 key={item.path}

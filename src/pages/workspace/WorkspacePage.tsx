@@ -59,7 +59,7 @@ export const WorkspacePage = () => {
 
     try {
       const { workspaceApi } = await import('@/features/workspace/api/workspace.api');
-      await workspaceApi.createWorkspace({
+      const newWorkspace = await workspaceApi.createWorkspace({
         name: workspaceName,
         description: '',
         jiraUrl: fullJiraUrl,
@@ -69,9 +69,13 @@ export const WorkspacePage = () => {
       });
 
       setTestSuccess(true);
-      // Navigate to workspace list
+      
+      const { useWorkspaceStore } = await import('@/core/store/workspace.store');
+      useWorkspaceStore.getState().setActiveWorkspace(newWorkspace);
+
+      // Navigate to dashboard
       setTimeout(() => {
-        navigate(ROUTES.WORKSPACE_LIST);
+        navigate(ROUTES.DASHBOARD);
       }, 1000);
     } catch (err: any) {
       console.error(err);

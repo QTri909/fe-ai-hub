@@ -10,4 +10,7 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
   ],
+  define: {
+    global: 'window',
+  },
 })

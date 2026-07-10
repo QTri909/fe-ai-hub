@@ -1,17 +1,138 @@
 import React, { useState } from 'react';
-import { Search, Filter, Play } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Play, Trash } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { testCaseApi, type TestCase } from '@/features/project/api/testCases.api';
+import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
 
 export const TestCaseRepository = () => {
   const navigate = useNavigate();
   const [selectedTc, setSelectedTc] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'steps' | 'data' | 'script'>('steps');
 
-  // Mock data
-  const mockTestCases = [
-    { id: 'TC-001', title: 'Successful login with valid Google account', status: 'APPROVED', priority: 'High', reqId: 'PROJ-1' },
-    { id: 'TC-002', title: 'Login cancellation', status: 'DRAFT', priority: 'Medium', reqId: 'PROJ-1' },
-  ];
+  const { id: reqId, projectId } = useParams<{ id: string; projectId: string }>();
+  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [steps, setSteps] = useState<any[]>([]);
+  const [testData, setTestData] = useState<any[]>([]);
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  // Checkbox selection
+  const [selectedTestCaseIds, setSelectedTestCaseIds] = useState<number[]>([]);
+  
+  // Add to Suite modal state
+  const [isAddToSuiteModalOpen, setIsAddToSuiteModalOpen] = useState(false);
+  const [testSuites, setTestSuites] = useState<TestSuite[]>([]);
+  const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
+  const [isLoadingSuites, setIsLoadingSuites] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    const fetchTestCases = async () => {
+      try {
+        setIsLoading(true);
+        if (reqId) {
+          const data = await testCaseApi.getTestCasesByRequirement(reqId);
+          setTestCases(data);
+        } else {
+          const data = await testCaseApi.getAllTestCases();
+          setTestCases(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch test cases:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTestCases();
+  }, [reqId]);
+
+  React.useEffect(() => {
+    if (!selectedTc) {
+      setSteps([]);
+      setTestData([]);
+      setScripts([]);
+      return;
+    }
+    const fetchDetails = async () => {
+      try {
+        setIsLoadingDetails(true);
+        const [stepsData, testDataVal, scriptsData] = await Promise.all([
+          testCaseApi.getTestCaseSteps(selectedTc.testCaseId),
+          testCaseApi.getTestCaseTestData(selectedTc.testCaseId),
+          testCaseApi.getTestCaseScripts(selectedTc.testCaseId)
+        ]);
+        setSteps(stepsData);
+        setTestData(testDataVal);
+        setScripts(scriptsData);
+      } catch (error) {
+        console.error("Failed to fetch test case details:", error);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    };
+    fetchDetails();
+  }, [selectedTc]);
+
+  const handleToggleSelect = (tcId: number) => {
+    setSelectedTestCaseIds(prev =>
+      prev.includes(tcId) ? prev.filter(id => id !== tcId) : [...prev, tcId]
+    );
+  };
+
+  const handleToggleAll = () => {
+    if (selectedTestCaseIds.length === testCases.length) {
+      setSelectedTestCaseIds([]);
+    } else {
+      setSelectedTestCaseIds(testCases.map(tc => tc.testCaseId));
+    }
+  };
+
+  const handleOpenAddToSuite = async () => {
+    if (!projectId) return;
+    try {
+      setIsLoadingSuites(true);
+      setIsAddToSuiteModalOpen(true);
+      const suites = await testSuiteApi.getTestSuitesByProject(projectId);
+      setTestSuites(suites);
+    } catch (error) {
+      console.error("Failed to fetch test suites:", error);
+    } finally {
+      setIsLoadingSuites(false);
+    }
+  };
+
+  const handleAddToSuiteSubmit = async () => {
+    if (!selectedSuiteId || selectedTestCaseIds.length === 0) return;
+    try {
+      setIsSubmitting(true);
+      await testSuiteApi.addTestCasesToSuite(selectedSuiteId, selectedTestCaseIds);
+      setIsAddToSuiteModalOpen(false);
+      setSelectedTestCaseIds([]);
+      alert("Successfully added test cases to suite!");
+    } catch (error) {
+      console.error("Failed to add test cases to suite:", error);
+      alert("Failed to add test cases to suite. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteTestCase = async (tcId: number) => {
+    if (!window.confirm("Are you sure you want to delete this test case? This will remove it from all test suites and cannot be undone.")) return;
+    try {
+      await testCaseApi.deleteTestCase(tcId);
+      setTestCases(prev => prev.filter(tc => tc.testCaseId !== tcId));
+      if (selectedTc?.testCaseId === tcId) {
+        setSelectedTc(null);
+      }
+      alert("Test case deleted successfully.");
+    } catch (error) {
+      console.error("Failed to delete test case:", error);
+      alert("Failed to delete test case. Please try again.");
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -41,6 +162,15 @@ export const TestCaseRepository = () => {
             <Filter size={18} />
             Filter
           </button>
+          
+          {selectedTestCaseIds.length > 0 && (
+            <button 
+              onClick={handleOpenAddToSuite}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium animate-fade-in"
+            >
+              Add to Test Suite ({selectedTestCaseIds.length})
+            </button>
+          )}
         </div>
 
         {/* Master-Detail Area */}
@@ -50,7 +180,14 @@ export const TestCaseRepository = () => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-gray-950/50 sticky top-0">
                 <tr>
-                  <th className="p-4 w-12"><input type="checkbox" className="rounded border-gray-700 bg-gray-900" /></th>
+                  <th className="p-4 w-12">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-700 bg-gray-900"
+                      checked={testCases.length > 0 && selectedTestCaseIds.length === testCases.length}
+                      onChange={handleToggleAll}
+                    />
+                  </th>
                   <th className="p-4 text-sm font-medium text-gray-400">Code</th>
                   <th className="p-4 text-sm font-medium text-gray-400">Title</th>
                   <th className="p-4 text-sm font-medium text-gray-400">Req</th>
@@ -58,16 +195,23 @@ export const TestCaseRepository = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockTestCases.map(tc => (
+                {testCases.map(tc => (
                   <tr 
-                    key={tc.id} 
+                    key={tc.testCaseId} 
                     onClick={() => setSelectedTc(tc)}
-                    className={`border-t border-gray-800/50 cursor-pointer hover:bg-gray-800/50 transition-colors ${selectedTc?.id === tc.id ? 'bg-gray-800/50' : ''}`}
+                    className={`border-t border-gray-800/50 cursor-pointer hover:bg-gray-800/50 transition-colors ${selectedTc?.testCaseId === tc.testCaseId ? 'bg-gray-800/50' : ''}`}
                   >
-                    <td className="p-4"><input type="checkbox" className="rounded border-gray-700 bg-gray-900" onClick={e => e.stopPropagation()}/></td>
-                    <td className="p-4 text-gray-300 font-mono text-sm">{tc.id}</td>
+                    <td className="p-4" onClick={e => e.stopPropagation()}>
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-700 bg-gray-900"
+                        checked={selectedTestCaseIds.includes(tc.testCaseId)}
+                        onChange={() => handleToggleSelect(tc.testCaseId)}
+                      />
+                    </td>
+                    <td className="p-4 text-gray-300 font-mono text-sm">{tc.testCaseCode}</td>
                     <td className="p-4 text-gray-200 font-medium">{tc.title}</td>
-                    <td className="p-4 text-gray-500 text-sm">{tc.reqId}</td>
+                    <td className="p-4 text-gray-500 text-sm">{tc.requirementId}</td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                         tc.status === 'APPROVED' 
@@ -88,10 +232,42 @@ export const TestCaseRepository = () => {
             <div className="w-1/2 bg-gray-900 overflow-hidden flex flex-col">
               <div className="p-6 border-b border-gray-800 bg-gray-950/30">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-indigo-400 font-mono text-sm">{selectedTc.id}</span>
-                  <button onClick={() => setSelectedTc(null)} className="text-gray-500 hover:text-gray-300">×</button>
+                  <span className="text-indigo-400 font-mono text-sm">{selectedTc.testCaseCode}</span>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => handleDeleteTestCase(selectedTc.testCaseId)}
+                      className="text-red-500 hover:text-red-400 p-1 hover:bg-red-500/10 rounded transition-colors"
+                      title="Delete Test Case"
+                    >
+                      <Trash size={16} />
+                    </button>
+                    <button onClick={() => setSelectedTc(null)} className="text-gray-500 hover:text-gray-300">×</button>
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-white mb-4">{selectedTc.title}</h2>
+                <h2 className="text-xl font-bold text-white mb-2">{selectedTc.title}</h2>
+                <div className="mb-4">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Expected Result</span>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      defaultValue={selectedTc.expectedResult || ''}
+                      placeholder="Enter expected result..."
+                      className="flex-1 bg-gray-950 border border-gray-800 text-gray-300 text-sm rounded px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+                      onBlur={async (e) => {
+                        const val = e.target.value;
+                        if (val !== selectedTc.expectedResult) {
+                          try {
+                            await testCaseApi.updateTestCase(selectedTc.testCaseId, { expectedResult: val });
+                            setSelectedTc({...selectedTc, expectedResult: val});
+                            setTestCases(testCases.map(tc => tc.testCaseId === selectedTc.testCaseId ? {...tc, expectedResult: val} : tc));
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
                 
                 {/* Tabs */}
                 <div className="flex gap-6 border-b border-gray-800">
@@ -112,46 +288,133 @@ export const TestCaseRepository = () => {
               </div>
 
               <div className="p-6 flex-1 overflow-auto">
-                {activeTab === 'steps' && (
-                  <div className="font-mono text-sm text-gray-300 space-y-3 bg-gray-950 p-4 rounded-lg border border-gray-800">
-                    <p><span className="text-blue-400 font-semibold mr-2">Given</span>the user is on the login page</p>
-                    <p><span className="text-emerald-400 font-semibold mr-2">When</span>the user clicks "Login with Google" and completes auth</p>
-                    <p><span className="text-purple-400 font-semibold mr-2">Then</span>the user should be redirected to the dashboard</p>
-                  </div>
-                )}
-                {activeTab === 'data' && (
-                  <div className="bg-gray-950 p-4 rounded-lg border border-gray-800">
-                    <pre className="text-sm text-emerald-400 font-mono">
-{`{
-  "users": [
-    {
-      "email": "test@example.com",
-      "role": "admin"
-    }
-  ]
-}`}
-                    </pre>
-                  </div>
-                )}
-                {activeTab === 'script' && (
-                  <div className="bg-gray-950 p-4 rounded-lg border border-gray-800 h-full">
-                    <pre className="text-sm text-gray-300 font-mono">
-{`import { test, expect } from '@playwright/test';
-
-test('Successful login with valid Google account', async ({ page }) => {
-  await page.goto('/login');
-  await page.click('text=Login with Google');
-  // Complete auth
-  await expect(page).toHaveURL('/dashboard');
-});`}
-                    </pre>
-                  </div>
+                {isLoadingDetails ? (
+                  <div className="text-gray-400 text-sm">Loading details...</div>
+                ) : (
+                  <>
+                    {activeTab === 'steps' && (
+                      <div>
+                        {steps.length > 0 ? (
+                          <div className="overflow-x-auto rounded-lg border border-gray-800">
+                            <table className="w-full text-sm text-left text-gray-300">
+                              <thead className="text-xs text-gray-400 uppercase bg-gray-900 border-b border-gray-800">
+                                <tr>
+                                  <th className="px-4 py-2 w-12 text-center">#</th>
+                                  <th className="px-4 py-2">Action</th>
+                                  <th className="px-4 py-2">Expected Result</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {steps.map((step: any, idx: number) => (
+                                  <tr key={step.testStepId || idx} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/50 bg-gray-950">
+                                    <td className="px-4 py-3 text-center text-gray-500">{step.stepOrder || idx + 1}</td>
+                                    <td className="px-4 py-3 whitespace-pre-wrap">{step.actionDescription}</td>
+                                    <td className="px-4 py-3 whitespace-pre-wrap">{step.expectedResult}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm p-4 bg-gray-950 rounded-lg border border-gray-800">No steps generated for this test case.</div>
+                        )}
+                      </div>
+                    )}
+                    {activeTab === 'data' && (
+                      <div className="bg-gray-950 p-4 rounded-lg border border-gray-800">
+                        {testData.length > 0 ? (
+                          testData.map((data: any) => (
+                            <div key={data.testDataId} className="mb-4">
+                              {data.dataName && <div className="text-gray-400 font-semibold mb-1 text-xs">{data.dataName}</div>}
+                              <pre className="text-sm text-emerald-400 font-mono overflow-auto max-h-48">
+                                {data.inputData}
+                              </pre>
+                              {data.expectedData && (
+                                <pre className="text-sm text-blue-400 font-mono overflow-auto max-h-48 mt-2 border-t border-gray-800 pt-2">
+                                  {data.expectedData}
+                                </pre>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-gray-500 text-sm">No test data generated for this test case.</div>
+                        )}
+                      </div>
+                    )}
+                    {activeTab === 'script' && (
+                      <div className="bg-gray-950 p-4 rounded-lg border border-gray-800 h-full">
+                        {scripts.length > 0 ? (
+                          scripts.map((script: any) => (
+                            <div key={script.scriptId} className="mb-4 h-full">
+                              <div className="text-gray-500 text-xs mb-1">
+                                {script.scriptName} ({script.scriptLanguage || script.framework})
+                              </div>
+                              <pre className="text-sm text-gray-300 font-mono overflow-auto max-h-96">
+                                {script.scriptContent}
+                              </pre>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-gray-500 text-sm">No script generated for this test case.</div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Add to Suite Modal */}
+      {isAddToSuiteModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100]">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Add {selectedTestCaseIds.length} Test Case(s) to Test Suite</h3>
+            
+            {isLoadingSuites ? (
+              <div className="text-gray-400 text-sm">Loading test suites...</div>
+            ) : testSuites.length === 0 ? (
+              <div className="text-gray-400 text-sm mb-6">
+                No test suites found for this project. Please create a test suite first.
+              </div>
+            ) : (
+              <div className="space-y-4 mb-6">
+                <label className="block text-xs font-semibold text-gray-400 uppercase">Select Test Suite</label>
+                <select 
+                  value={selectedSuiteId || ''} 
+                  onChange={e => setSelectedSuiteId(Number(e.target.value))}
+                  className="w-full bg-gray-950 border border-gray-800 text-gray-200 rounded-lg p-2.5 outline-none focus:border-indigo-500"
+                >
+                  <option value="">-- Choose a Test Suite --</option>
+                  {testSuites.map(suite => (
+                    <option key={suite.suiteId} value={suite.suiteId}>
+                      {suite.suiteName} ({suite.suiteCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setIsAddToSuiteModalOpen(false)}
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleAddToSuiteSubmit}
+                disabled={!selectedSuiteId || isSubmitting}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
+              >
+                {isSubmitting ? 'Adding...' : 'Add to Suite'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

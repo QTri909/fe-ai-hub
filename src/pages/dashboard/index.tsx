@@ -9,19 +9,29 @@ export const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    let intervalId: NodeJS.Timeout;
+
+    const fetchProjects = async (showLoading = true) => {
       if (!activeWorkspace) return;
       try {
-        setIsLoading(true);
+        if (showLoading) setIsLoading(true);
         const data = await projectApi.getProjectsByWorkspaceId(activeWorkspace.id, 0, 3); // Get top 3
         setProjects(data.content || []);
       } catch (error) {
         console.error('Failed to fetch projects', error);
       } finally {
-        setIsLoading(false);
+        if (showLoading) setIsLoading(false);
       }
     };
-    fetchProjects();
+
+    fetchProjects(true);
+
+    // Poll every 5 seconds to get real-time sync updates
+    intervalId = setInterval(() => {
+      fetchProjects(false);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
   }, [activeWorkspace]);
 
   return (
@@ -53,7 +63,7 @@ export const DashboardPage = () => {
             <span className="text-[10px] font-code text-tertiary">+1 this week</span>
           </div>
           <h3 className="font-label-md text-xs text-on-surface-variant">Projects Synced</h3>
-          <p className="font-headline-md text-2xl mt-1 text-on-surface">4</p>
+          <p className="font-headline-md text-2xl mt-1 text-on-surface">{projects.length}</p>
         </div>
         
         {/* Issues Analyzed */}
@@ -63,7 +73,7 @@ export const DashboardPage = () => {
             <span className="text-[10px] font-code text-tertiary">↑ 12%</span>
           </div>
           <h3 className="font-label-md text-xs text-on-surface-variant">Issues Analyzed</h3>
-          <p className="font-headline-md text-2xl mt-1 text-on-surface">128</p>
+          <p className="font-headline-md text-2xl mt-1 text-on-surface">0</p>
         </div>
         
         {/* Tests Generated */}
@@ -73,7 +83,7 @@ export const DashboardPage = () => {
             <span className="text-[10px] font-code text-tertiary">Live</span>
           </div>
           <h3 className="font-label-md text-xs text-on-surface-variant">Tests Generated</h3>
-          <p className="font-headline-md text-2xl mt-1 text-on-surface">1,024</p>
+          <p className="font-headline-md text-2xl mt-1 text-on-surface">0</p>
         </div>
         
         {/* Success Rate */}
@@ -83,7 +93,7 @@ export const DashboardPage = () => {
             <span className="text-[10px] font-code text-on-surface-variant">Stable</span>
           </div>
           <h3 className="font-label-md text-xs text-on-surface-variant">Success Rate</h3>
-          <p className="font-headline-md text-2xl mt-1 text-tertiary">94%</p>
+          <p className="font-headline-md text-2xl mt-1 text-tertiary">N/A</p>
         </div>
       </div>
 
@@ -106,8 +116,8 @@ export const DashboardPage = () => {
             projects.map((project, index) => {
               const icons = ['shopping_cart', 'account_balance', 'inventory_2'];
               const bgs = ['bg-primary/20 text-primary', 'bg-secondary-container/20 text-secondary', 'bg-surface-variant text-on-surface-variant'];
-              const bars = ['bg-primary w-[45%]', 'bg-tertiary w-[82%]', 'bg-primary-container w-[12%]'];
-              const coverages = ['45%', '82%', '12%'];
+              const bars = ['bg-primary w-[0%]', 'bg-tertiary w-[0%]', 'bg-primary-container w-[0%]'];
+              const coverages = ['0%', '0%', '0%'];
               const i = index % 3;
 
               return (
@@ -163,90 +173,10 @@ export const DashboardPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/20">
-              {/* Row 1 */}
-              <tr className="hover:bg-surface-container/40 transition-colors">
-                <td className="px-4 py-2 font-code text-xs text-primary">ECO-102</td>
-                <td className="px-4 py-2 font-body-md text-sm text-on-surface">Implement VNPay checkout integration</td>
-                <td className="px-4 py-2">
-                  <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-secondary-container text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>description</span>
-                    <span className="text-[10px] text-on-surface-variant">User Story</span>
-                  </div>
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-on-surface-variant font-body-md text-sm">
+                  No recent issues found.
                 </td>
-                <td className="px-4 py-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/30 text-tertiary text-[10px] font-bold">
-                    <span className="w-1 h-1 rounded-full bg-tertiary"></span>
-                    Generated
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <button className="p-1 hover:text-primary transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-sm">more_vert</span>
-                  </button>
-                </td>
-              </tr>
-              
-              {/* Row 2 */}
-              <tr className="hover:bg-surface-container/40 transition-colors">
-                <td className="px-4 py-2 font-code text-xs text-primary">ECO-105</td>
-                <td className="px-4 py-2 font-body-md text-sm text-on-surface">Fix session timeout on mobile safari</td>
-                <td className="px-4 py-2">
-                  <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-error text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>pest_control</span>
-                    <span className="text-[10px] text-on-surface-variant">Bug</span>
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-[10px] font-bold">
-                    <span className="w-1 h-1 rounded-full bg-primary animate-pulse"></span>
-                    Analyzing...
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <button className="p-1 hover:text-primary transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-sm">more_vert</span>
-                  </button>
-                </td>
-              </tr>
-
-              {/* Row 3 */}
-              <tr className="hover:bg-surface-container/40 transition-colors">
-                <td className="px-4 py-2 font-code text-xs text-primary">ECO-108</td>
-                <td className="px-4 py-2 font-body-md text-sm text-on-surface">Add coupon code validation at cart</td>
-                <td className="px-4 py-2">
-                  <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-secondary-container text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>description</span>
-                    <span className="text-[10px] text-on-surface-variant">User Story</span>
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-variant border border-outline-variant text-on-surface-variant text-[10px] font-bold">
-                    Pending
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <button className="p-1 hover:text-primary transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined text-sm">more_vert</span>
-                  </button>
-                </td>
-              </tr>
-
-              {/* Row 4: Skeleton 1 */}
-              <tr className="opacity-50">
-                <td className="px-4 py-2"><div className="h-3 w-12 skeleton rounded"></div></td>
-                <td className="px-4 py-2"><div className="h-3 w-48 skeleton rounded"></div></td>
-                <td className="px-4 py-2"><div className="h-3 w-16 skeleton rounded"></div></td>
-                <td className="px-4 py-2"><div className="h-4 w-20 skeleton rounded-full"></div></td>
-                <td className="px-4 py-2 text-right"><div className="h-3 w-3 ml-auto skeleton rounded-full"></div></td>
-              </tr>
-
-              {/* Row 5: Skeleton 2 */}
-              <tr className="opacity-30">
-                <td className="px-4 py-2"><div className="h-3 w-12 skeleton rounded"></div></td>
-                <td className="px-4 py-2"><div className="h-3 w-32 skeleton rounded"></div></td>
-                <td className="px-4 py-2"><div className="h-3 w-16 skeleton rounded"></div></td>
-                <td className="px-4 py-2"><div className="h-4 w-20 skeleton rounded-full"></div></td>
-                <td className="px-4 py-2 text-right"><div className="h-3 w-3 ml-auto skeleton rounded-full"></div></td>
               </tr>
             </tbody>
           </table>

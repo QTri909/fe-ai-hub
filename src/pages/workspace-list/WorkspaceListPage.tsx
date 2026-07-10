@@ -133,7 +133,7 @@ export const WorkspaceListPage = () => {
             </div>
             <div>
               <div className="text-[#cbc3d7] text-[12px] font-medium uppercase tracking-wider">System Health</div>
-              <div className="text-[#dae2fd] text-[20px] font-medium">99.9%</div>
+              <div className="text-[#dae2fd] text-[20px] font-medium">N/A</div>
             </div>
           </div>
           <div className="bg-[#131b2e] border border-[#494454]/20 p-4 rounded-xl flex items-center gap-4">
@@ -142,7 +142,7 @@ export const WorkspaceListPage = () => {
             </div>
             <div>
               <div className="text-[#cbc3d7] text-[12px] font-medium uppercase tracking-wider">Weekly Deployments</div>
-              <div className="text-[#dae2fd] text-[20px] font-medium">1,240</div>
+              <div className="text-[#dae2fd] text-[20px] font-medium">0</div>
             </div>
           </div>
           <div className="bg-[#131b2e] border border-[#494454]/20 p-4 rounded-xl flex items-center gap-4">
@@ -205,13 +205,7 @@ export const WorkspaceListPage = () => {
                     
                     <div className="flex items-center justify-between border-t border-[#494454]/20 pt-4">
                       <div className="flex -space-x-2">
-                        <div className="w-7 h-7 rounded-full border-2 border-[#131b2e] bg-[#2d3449] flex items-center justify-center overflow-hidden">
-                          <img className="w-full h-full object-cover" src="https://www.gstatic.com/labs-code/stitch/stitch-placeholder-300x300.svg" alt="Avatar" />
-                        </div>
-                        <div className="w-7 h-7 rounded-full border-2 border-[#131b2e] bg-[#2d3449] flex items-center justify-center overflow-hidden">
-                          <img className="w-full h-full object-cover" src="https://www.gstatic.com/labs-code/stitch/stitch-placeholder-300x300.svg" alt="Avatar" />
-                        </div>
-                        <div className="w-7 h-7 rounded-full border-2 border-[#131b2e] bg-[#2d3449] flex items-center justify-center text-[12px] font-bold text-[#dae2fd]">+{Math.floor(Math.random() * 10) + 1}</div>
+                        {/* No members data yet */}
                       </div>
                       <button className="text-[#d0bcff] font-bold text-[12px] uppercase tracking-widest flex items-center gap-1 group-hover:gap-2 transition-all">
                         Enter Dashboard
@@ -250,12 +244,7 @@ export const WorkspaceListPage = () => {
             </div>
           </div>
           <div className="p-4 font-['JetBrains_Mono'] text-[13px] text-[#cbc3d7]/80 space-y-1">
-            <div>[<span className="text-[#d0bcff]">14:02:45</span>] <span className="text-[#4edea3]">SUCCESS:</span> Authenticated session for user_dev_09</div>
-            <div>[<span className="text-[#d0bcff]">14:02:58</span>] <span className="text-[#dae2fd]">INFO:</span> Fetched {workspaces.length} active workspaces for "Global Hub"</div>
-            {workspaces.length > 0 && (
-              <div>[<span className="text-[#d0bcff]">14:03:12</span>] <span className="text-[#adc6ff]">SYSTEM:</span> Synchronizing Jira APIs with "{workspaces[0].name}"...</div>
-            )}
-            <div className="animate-pulse">[<span className="text-[#d0bcff]">14:04:00</span>] <span className="text-[#cbc3d7]">LISTENING:</span> Waiting for telemetry packets... <span className="bg-[#cbc3d7]/20 px-1 rounded">_</span></div>
+            <div className="animate-pulse">[<span className="text-[#d0bcff]">{new Date().toLocaleTimeString('en-GB')}</span>] <span className="text-[#cbc3d7]">LISTENING:</span> Waiting for telemetry packets... <span className="bg-[#cbc3d7]/20 px-1 rounded">_</span></div>
           </div>
         </div>
       </main>
