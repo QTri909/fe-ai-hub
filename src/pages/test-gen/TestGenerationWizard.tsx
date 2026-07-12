@@ -5,6 +5,21 @@ import { httpClient } from '@/infrastructure/http/client';
 import { requirementApi, type Requirement } from '@/features/project/api/requirements.api';
 import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
 import { testCaseApi } from '@/features/project/api/testCases.api';
+import { RequirementContent } from '@/components/common/RequirementContent';
+
+// Helper to parse description JSON
+const parseDescription = (description: string | undefined) => {
+  if (!description) return null;
+  try {
+    const parsed = JSON.parse(description);
+    if (parsed && typeof parsed === 'object' && parsed.content) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 export const TestGenerationWizard = () => {
   const navigate = useNavigate();
@@ -39,7 +54,7 @@ export const TestGenerationWizard = () => {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const response = await httpClient.post('/core-management-service/api/test-cases/generate', {
+      const response = await httpClient.post('/core-management-service/api/v1/test-cases/generate', {
         requirementId: reqId,
         scriptLanguage: 'JAVASCRIPT',
         framework: 'playwright',
@@ -114,26 +129,65 @@ export const TestGenerationWizard = () => {
           <h2 className="text-lg font-bold text-white mb-1">AI Test Generation</h2>
           <p className="text-sm text-gray-400">Configure AI settings to generate test cases.</p>
         </div>
+        
         <div className="p-6 flex-1 overflow-auto space-y-6">
-          <div>
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Requirement Context</h3>
-            <div className="bg-gray-950 border border-gray-800 rounded-lg p-4 text-sm text-gray-300">
-              <strong className="block text-white mb-1">{requirement?.requirementKey || 'PROJ-1'}: {requirement?.title || 'Login with OAuth'}</strong>
-              <p className="mb-2">{requirement?.description || 'As a user, I want to login with OAuth so that I can securely access the platform.'}</p>
+          <div className="bg-gray-950 border border-gray-800 rounded-lg overflow-hidden">
+            {/* Requirement Header */}
+            <div className="p-4 border-b border-gray-800">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded text-xs font-mono">
+                  {requirement?.requirementKey || 'AUT-3'}
+                </span>
+                <h4 className="text-white font-semibold">{requirement?.title || 'Verify Register'}</h4>
+              </div>
             </div>
+            
+            {/* User Story & Description */}
+            <div className="p-4 border-b border-gray-800">
+              <div className="text-xs font-semibold text-gray-500 uppercase mb-2">User Story</div>
+              <div className="text-sm text-gray-300 leading-relaxed">
+                {requirement?.description ? (
+                  parseDescription(requirement.description) ? (
+                    <RequirementContent content={parseDescription(requirement.description)} />
+                  ) : (
+                    <p className="whitespace-pre-wrap">{requirement.description}</p>
+                  )
+                ) : (
+                  <p>As a new visitor of Automation Exercise, I want to register for a new account using my email and personal details, so that I can purchase products and manage my orders.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Acceptance Criteria */}
+            {requirement?.acceptanceCriteriaList && requirement.acceptanceCriteriaList.length > 0 ? (
+              <div className="p-4">
+                <div className="text-xs font-semibold text-gray-500 uppercase mb-3">Acceptance Criteria ({requirement.acceptanceCriteriaList.length})</div>
+                <div className="space-y-3">
+                  {requirement.acceptanceCriteriaList.map((ac, index) => (
+                    <div key={ac.id} className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-indigo-500/20 text-indigo-300 rounded-full flex items-center justify-center text-xs font-semibold">
+                        {index + 1}
+                      </span>
+                      <p className="text-sm text-gray-300 flex-1">{ac.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-center">
+                <p className="text-sm text-gray-500">No acceptance criteria defined</p>
+              </div>
+            )}
           </div>
 
-
-
-          <div className="space-y-4">
-            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4 flex gap-3">
-              <AlertCircle className="text-indigo-400 shrink-0" size={20} />
-              <div className="text-sm text-indigo-200">
-                <p><strong>Note:</strong> Test Script generation and Language/Framework selection will be available after the human review step.</p>
-              </div>
+          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4 flex gap-3">
+            <AlertCircle className="text-indigo-400 shrink-0" size={20} />
+            <div className="text-sm text-indigo-200">
+              <p><strong>Note:</strong> Test Script generation and Language/Framework selection will be available after the human review step.</p>
             </div>
           </div>
         </div>
+        
         <div className="p-6 border-t border-gray-800">
           <button 
             onClick={handleGenerate}
@@ -209,46 +263,46 @@ export const TestGenerationWizard = () => {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => {
-                        setEditingIndex(index);
-                        setEditForm({...tc});
-                      }}
-                      className="text-gray-400 hover:text-indigo-400"><Edit size={16} /></button>
-                  </div>
-                  <h3 className="text-indigo-400 font-bold mb-4 font-mono text-sm">Scenario: {tc.scenario || tc.title}</h3>
-                  {tc.precondition && (
-                    <div className="mb-4">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Preconditions</span>
-                      <p className="text-sm text-gray-300">{tc.precondition}</p>
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => {
+                          setEditingIndex(index);
+                          setEditForm({...tc});
+                        }}
+                        className="text-gray-400 hover:text-indigo-400"><Edit size={16} /></button>
                     </div>
-                  )}
-                  {tc.steps && tc.steps.length > 0 && (
-                    <div>
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">Test Steps</span>
-                      <div className="overflow-x-auto rounded-lg border border-gray-800">
-                        <table className="w-full text-sm text-left text-gray-300">
-                          <thead className="text-xs text-gray-400 uppercase bg-gray-900 border-b border-gray-800">
-                            <tr>
-                              <th className="px-4 py-2 w-12 text-center">#</th>
-                              <th className="px-4 py-2">Action</th>
-                              <th className="px-4 py-2">Expected Result</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {tc.steps.map((step: any, idx: number) => (
-                              <tr key={idx} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/50">
-                                <td className="px-4 py-3 text-center text-gray-500">{idx + 1}</td>
-                                <td className="px-4 py-3 whitespace-pre-wrap">{step.action || step.actionDescription}</td>
-                                <td className="px-4 py-3 whitespace-pre-wrap">{step.expected_result || step.expectedResult}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    <h3 className="text-indigo-400 font-bold mb-4 font-mono text-sm">Scenario: {tc.scenario || tc.title}</h3>
+                    {tc.precondition && (
+                      <div className="mb-4">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Preconditions</span>
+                        <p className="text-sm text-gray-300">{tc.precondition}</p>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    {tc.steps && tc.steps.length > 0 && (
+                      <div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">Test Steps</span>
+                        <div className="overflow-x-auto rounded-lg border border-gray-800">
+                          <table className="w-full text-sm text-left text-gray-300">
+                            <thead className="text-xs text-gray-400 uppercase bg-gray-900 border-b border-gray-800">
+                              <tr>
+                                <th className="px-4 py-2 w-12 text-center">#</th>
+                                <th className="px-4 py-2">Action</th>
+                                <th className="px-4 py-2">Expected Result</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {tc.steps.map((step: any, idx: number) => (
+                                <tr key={idx} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/50">
+                                  <td className="px-4 py-3 text-center text-gray-500">{idx + 1}</td>
+                                  <td className="px-4 py-3 whitespace-pre-wrap">{step.action || step.actionDescription}</td>
+                                  <td className="px-4 py-3 whitespace-pre-wrap">{step.expected_result || step.expectedResult}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
