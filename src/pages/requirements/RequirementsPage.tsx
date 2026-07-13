@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus, Wand2, ListChecks } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { requirementApi, type Requirement } from '@/features/project/api/requirements.api';
+import { RequirementContent } from '@/components/common/RequirementContent';
 
 export const RequirementsPage = () => {
   const navigate = useNavigate();
@@ -25,6 +26,33 @@ export const RequirementsPage = () => {
     };
     fetchRequirements();
   }, [projectId]);
+
+  // Parse JSON description from Jira
+  const parseDescription = (description: string | undefined) => {
+    if (!description) return null;
+    try {
+      const parsed = JSON.parse(description);
+      // Ensure parsed content has valid structure
+      if (parsed && typeof parsed === 'object' && parsed.content) {
+        return parsed;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Get plain text fallback for description
+  const getPlainTextDescription = (description: string | undefined) => {
+    if (!description) return null;
+    // If not valid JSON, return as plain text
+    try {
+      JSON.parse(description);
+      return null; // Valid JSON, will use RequirementContent instead
+    } catch {
+      return description;
+    }
+  };
 
   return (
     <div className="flex h-full flex-col animate-fade-in">
@@ -126,13 +154,12 @@ export const RequirementsPage = () => {
                   <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Description</h3>
                   <div className="text-on-surface font-body-md text-sm mb-8 leading-relaxed bg-surface-container-lowest border border-outline-variant/20 p-4 rounded-lg shadow-sm">
                     {selectedReq.description ? (
-                      <div dangerouslySetInnerHTML={{ 
-                        __html: selectedReq.description
-                          .replace(/\n/g, '<br />')
-                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                          .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noreferrer" class="text-primary hover:underline">$1</a>') 
-                      }} />
+                      parseDescription(selectedReq.description) ? (
+                        <RequirementContent content={parseDescription(selectedReq.description)} />
+                      ) : (
+                        // Fallback: display plain text if JSON parse fails
+                        <p className="text-gray-300 whitespace-pre-wrap">{getPlainTextDescription(selectedReq.description)}</p>
+                      )
                     ) : (
                       <span className="italic text-on-surface-variant opacity-70">No description provided.</span>
                     )}

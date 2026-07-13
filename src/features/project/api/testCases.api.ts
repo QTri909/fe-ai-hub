@@ -54,5 +54,22 @@ export const testCaseApi = {
 
   deleteTestCase: async (id: number): Promise<void> => {
     await httpClient.delete(`/core-management-service/api/test-cases/${id}`);
+  },
+
+  generateScript: async (tcId: number, baseUrl: string, scriptLanguage: string = 'javascript', framework: string = 'playwright'): Promise<any> => {
+    const response = await httpClient.post(`/core-management-service/api/test-cases/${tcId}/generate-script`, {
+      baseUrl,
+      scriptLanguage,
+      framework
+    });
+    return response.data;
+  },
+
+  executeScript: async (tcId: number, baseUrl: string, maxFixAttempts?: number): Promise<any> => {
+    const response = await httpClient.post(`/core-management-service/api/test-cases/${tcId}/execute`, {
+      baseUrl,
+      maxFixAttempts
+    });
+    return response.data;
   }
 };
