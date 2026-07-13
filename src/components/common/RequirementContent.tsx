@@ -26,14 +26,14 @@ export const RequirementContent: React.FC<RequirementContentProps> = ({ content 
   // Parse content based on format
   const parseSections = () => {
     const sections: { title: string; content: React.ReactNode }[] = [];
-    
+
     content.content.forEach((node: ContentNode, idx: number) => {
       if (node.type === 'paragraph' && node.content) {
         const textContent = node.content
           .filter((c: ContentNode) => c.type === 'text')
           .map((c: ContentNode) => c.text || '')
           .join('');
-        
+
         if (textContent.includes('USER STORY:')) {
           sections.push({
             title: 'User Story',
@@ -69,7 +69,7 @@ export const RequirementContent: React.FC<RequirementContentProps> = ({ content 
         });
       }
     });
-    
+
     return sections;
   };
 
@@ -102,9 +102,11 @@ export const RequirementContent: React.FC<RequirementContentProps> = ({ content 
   };
 
   // Render sections that have been analyzed
+  const sections = parseSections();
+
   return (
     <div className="space-y-4">
-      {parseSections().map((section, idx) => (
+      {sections.map((section, idx) => (
         <React.Fragment key={idx}>
           {section.title === 'User Story' && (
             <div>
@@ -120,6 +122,33 @@ export const RequirementContent: React.FC<RequirementContentProps> = ({ content 
           )}
         </React.Fragment>
       ))}
+
+      {/* Fallback: render all content if no recognized sections found */}
+      {sections.length === 0 && (
+        <div>
+          {content.content?.map((node: ContentNode, idx: number) => {
+            if (node.type === 'paragraph' && node.content) {
+              return (
+                <p key={idx} className="text-sm text-gray-300 leading-relaxed mb-2">
+                  {renderUserStory(node.content)}
+                </p>
+              );
+            }
+            if (node.type === 'bulletList') {
+              return (
+                <ul key={idx} className="list-disc pl-5 space-y-2 mb-2">
+                  {node.content?.map((child: ContentNode, childIdx: number) => (
+                    <li key={childIdx} className="text-sm text-gray-300 leading-relaxed">
+                      {renderAcText(child.content?.[0])}
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, XCircle, Clock, ChevronRight, Loader2 } from 'lucide-react';
-import { testRunApi, TestRun } from '@/features/project/api/testRuns.api';
+import { testRunApi } from '@/features/project/api/testRuns.api';
+import type { TestRun } from '@/features/project/api/testRuns.api';
 
 export function TestRunsPage() {
     const { projectId } = useParams();
@@ -32,7 +33,7 @@ export function TestRunsPage() {
             <div className="flex justify-between items-center my-6">
                 <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Test Runs</h1>
                 <button 
-                    onClick={() => navigate(`/project/${projectId}/runner`)}
+                    onClick={() => navigate(`/projects/${projectId}/test-runner`)}
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-xl shadow-md shadow-blue-200 text-sm transition-all"
                 >
                     <Play size={18} fill="currentColor" />
@@ -62,7 +63,7 @@ export function TestRunsPage() {
                             </tr>
                         )}
                         {runs.map(run => (
-                            <tr key={run.runId} className="hover:bg-slate-50/50 transition group cursor-pointer border-b border-slate-100 last:border-b-0" onClick={() => navigate(`/project/${projectId}/test-runs/${run.runId}`)}>
+                            <tr key={run.runId} className="hover:bg-slate-50/50 transition group cursor-pointer border-b border-slate-100 last:border-b-0" onClick={() => navigate(`/projects/${projectId}/test-runs/${run.runId}`)}>
                                 <td className="py-4 px-6 font-bold text-blue-600">RUN-{run.runId.toString().padStart(3, '0')}</td>
                                 <td className="py-4 px-6 font-medium text-slate-600">{run.testSuite.suiteName}</td>
                                 <td className="py-4 px-6">

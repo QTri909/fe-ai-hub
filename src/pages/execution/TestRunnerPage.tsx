@@ -38,13 +38,13 @@ export const TestRunnerPage = () => {
     );
   };
 
-  const pollExecutionResults = (suiteId: number) => {
+  const pollExecutionResults = (runId: number) => {
     const maxAttempts = 120; // 10 minutes total (5s * 120)
     let attempt = 0;
     
     const poll = async () => {
       try {
-        const res = await httpClient.get(`/core-management-service/api/v1/test-pipeline/results/${suiteId}`);
+        const res = await httpClient.get(`/core-management-service/api/v1/test-pipeline/results/${runId}`);
         const data = res.data;
         
         if (data.is_completed) {

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, XCircle, Clock, FileText, Loader2, AlertCircle, Bug, RefreshCw, Download, Target, Square, Code, Minus } from 'lucide-react';
-import { testRunApi, TestRun, TestRunItem } from '@/features/project/api/testRuns.api';
+import { testRunApi } from '@/features/project/api/testRuns.api';
+import type { TestRun, TestRunItem } from '@/features/project/api/testRuns.api';
 
 export function TestRunDetailsPage() {
     const { projectId, runId } = useParams();
@@ -39,7 +40,7 @@ export function TestRunDetailsPage() {
         <div className="p-8 max-w-[1400px] mx-auto text-gray-900 min-h-screen bg-gray-50/50">
             
             <button 
-                onClick={() => navigate(`/project/${projectId}/test-runs`)}
+                onClick={() => navigate(`/projects/${projectId}/test-runs`)}
                 className="mb-4 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition font-medium"
             >
                 <ArrowLeft size={18} /> Back to Test Runs
