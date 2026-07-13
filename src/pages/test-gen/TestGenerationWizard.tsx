@@ -54,19 +54,19 @@ export const TestGenerationWizard = () => {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const response = await httpClient.post('/core-management-service/api/v1/test-cases/generate', {
-        requirementId: reqId,
+      const response = await httpClient.post(`/core-management-service/api/v1/requirements/${reqId}/generate-test-cases`, {
         scriptLanguage: 'JAVASCRIPT',
         framework: 'playwright',
         maxTestCases: 5,
         generateScript: false,
         generateTestData: false,
+        maxLajRetries: 3,
         baseUrl: baseUrl
       }, {
         timeout: 120000 // 2 minutes for AI generation
       });
       if (response.data) {
-        setGeneratedCases(response.data);
+        setGeneratedCases(response.data.testCases || []);
       }
     } catch (error) {
       console.error('Failed to generate test cases', error);

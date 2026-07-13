@@ -23,8 +23,10 @@ export const TestRunnerPage = () => {
       setIsLoadingSuites(true);
       testSuiteApi.getTestSuitesByProject(projectId)
         .then((res: any) => {
+          console.log('TestRunnerPage - API Response:', res);
           const suites = Array.isArray(res) ? res : res?.content || res?.data || [];
-          setTestSuites(suites.filter((s: TestSuite) => s.status !== 'DEPRECATED'));
+          console.log('TestRunnerPage - Parsed suites:', suites);
+          setTestSuites(suites); // Removed filter to show all suites
         })
         .finally(() => setIsLoadingSuites(false));
     }

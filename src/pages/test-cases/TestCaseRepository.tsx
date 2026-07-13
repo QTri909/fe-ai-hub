@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Play, Trash } from 'lucide-react';
+import { Search, Filter, Play, Trash, Code } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testCaseApi, type TestCase } from '@/features/project/api/testCases.api';
 import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
@@ -17,6 +17,7 @@ export const TestCaseRepository = () => {
   const [testData, setTestData] = useState<any[]>([]);
   const [scripts, setScripts] = useState<any[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
 
   // Checkbox selection
   const [selectedTestCaseIds, setSelectedTestCaseIds] = useState<number[]>([]);
@@ -119,7 +120,7 @@ export const TestCaseRepository = () => {
     }
   };
 
-  const handleDeleteTestCase = async (tcId: number) => {
+const handleDeleteTestCase = async (tcId: number) => {
     if (!window.confirm("Are you sure you want to delete this test case? This will remove it from all test suites and cannot be undone.")) return;
     try {
       await testCaseApi.deleteTestCase(tcId);
@@ -131,6 +132,79 @@ export const TestCaseRepository = () => {
     } catch (error) {
       console.error("Failed to delete test case:", error);
       alert("Failed to delete test case. Please try again.");
+    }
+  };
+
+const handleGenerateScript = async () => {
+    if (!selectedTc) return;
+    const baseUrl = window.prompt("Enter base URL:", "https://example.com") || "";
+    if (!baseUrl) return;
+    
+    try {
+      setIsGeneratingScript(true);
+      const response = await testCaseApi.generateScript(selectedTc.testCaseId, baseUrl);
+      
+      // Debug: Log response
+      console.log("Generate script response:", response);
+      
+      // Backend returns scriptContent as string and testData as list
+      if (response.success) {
+        if (response.scriptContent && typeof response.scriptContent === 'string') {
+          setScripts([{
+            scriptId: Date.now(),
+            scriptName: response.scriptName || 'Generated Script',
+            scriptLanguage: response.scriptLanguage || 'javascript',
+            framework: response.framework || 'playwright',
+            scriptContent: response.scriptContent
+          }]);
+        }
+        if (response.testData && Array.isArray(response.testData)) {
+          setTestData(response.testData.map((d: any, idx: number) => ({
+            testDataId: Date.now() + idx,
+            dataName: d.dataName || '',
+            inputData: d.inputData || '',
+            expectedData: d.expectedData || ''
+          })));
+        }
+        alert("Script and test data generated successfully!");
+      } else {
+        alert("Failed to generate script: " + (response.message || "Unknown error from AI service"));
+      }
+    } catch (error: any) {
+      console.error("Failed to generate script:", error);
+      alert("Failed to generate script: " + (error.response?.data?.message || error.message));
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  };
+
+  const handleRunScript = async () => {
+    if (!selectedTc) return;
+    if (scripts.length === 0) {
+      alert("Please generate a script first before running tests.");
+      return;
+    }
+    
+    const baseUrl = window.prompt("Enter base URL to run tests against:", "https://example.com") || "";
+    if (!baseUrl) return;
+    
+    try {
+      setIsGeneratingScript(true);
+      const response = await testCaseApi.executeScript(selectedTc.testCaseId, baseUrl);
+      
+      if (response.passed) {
+        alert("Test passed successfully! Duration: " + response.executionTime + "ms");
+      } else {
+        alert("Test failed after " + response.attempts + " attempts. Error: " + (response.errorMessage || "Unknown"));
+        if (response.scriptUpdated) {
+          alert("Script has been auto-fixed! Please check the updated script.");
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to run script:", error);
+      alert("Failed to run script: " + (error.response?.data?.message || error.message));
+    } finally {
+      setIsGeneratingScript(false);
     }
   };
 
@@ -269,21 +343,46 @@ export const TestCaseRepository = () => {
                   </div>
                 </div>
                 
-                {/* Tabs */}
-                <div className="flex gap-6 border-b border-gray-800">
-                  {['steps', 'data', 'script'].map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab as any)}
-                      className={`pb-3 text-sm font-medium capitalize transition-colors border-b-2 ${
-                        activeTab === tab 
-                          ? 'border-indigo-500 text-indigo-400' 
-                          : 'border-transparent text-gray-500 hover:text-gray-300'
-                      }`}
-                    >
-                      Test {tab}
-                    </button>
-                  ))}
+{/* Tabs + Generate/Run Script Button */}
+                <div className="flex justify-between items-center border-b border-gray-800">
+                  <div className="flex gap-6">
+                    {['steps', 'data', 'script'].map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab as any)}
+                        className={`pb-3 text-sm font-medium capitalize transition-colors border-b-2 ${
+                          activeTab === tab 
+                            ? 'border-indigo-500 text-indigo-400' 
+                            : 'border-transparent text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        Test {tab}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    {steps.length > 0 && (
+                      <button
+                        onClick={handleGenerateScript}
+                        disabled={isGeneratingScript}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        <Code size={14} />
+                        {isGeneratingScript ? 'Generating...' : 'Generate Script + Test Data'}
+                      </button>
+                    )}
+                    {scripts.length > 0 && (
+                      <button
+                        onClick={handleRunScript}
+                        disabled={isGeneratingScript}
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        <Play size={14} />
+                        {isGeneratingScript ? 'Running...' : 'Run Script'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

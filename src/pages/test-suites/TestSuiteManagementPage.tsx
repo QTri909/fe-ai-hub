@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Edit, Trash2, X, ChevronDown, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, X, ChevronDown, ChevronRight, Loader2, CheckCircle2, Play } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
 import { httpClient } from '@/infrastructure/http/client';
@@ -77,6 +77,19 @@ export const TestSuiteManagementPage = () => {
       alert('Failed to link flow. See console for details.');
     } finally {
       setIsLinkingFlow(prev => ({ ...prev, [suiteId]: false }));
+    }
+  };
+
+  const handleRunTests = async (suiteId: number) => {
+    const baseUrl = window.prompt("Enter base URL to run tests against:", "https://example.com") || "";
+    if (!baseUrl) return;
+    
+    try {
+      await testSuiteApi.executeTestSuites([suiteId], baseUrl);
+      alert("Test execution started! Check the Test Runs page for results.");
+    } catch (error) {
+      console.error('Failed to run tests', error);
+      alert('Failed to run tests. See console for details.');
     }
   };
 
@@ -269,22 +282,31 @@ export const TestSuiteManagementPage = () => {
                         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
                           <div className="flex justify-between items-center mb-3">
                             <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider">Assigned Test Cases</h3>
-                            {!suite.isE2eFlow && (
+                            <div className="flex gap-2">
+                              {!suite.isE2eFlow && (
+                                <button 
+                                  onClick={() => handleLinkFlow(suite.suiteId)} 
+                                  disabled={isLinkingFlow[suite.suiteId]}
+                                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition"
+                                >
+                                  {isLinkingFlow[suite.suiteId] ? <Loader2 size={16} className="animate-spin" /> : null}
+                                  Link as E2E Flow
+                                </button>
+                              )}
                               <button 
-                                onClick={() => handleLinkFlow(suite.suiteId)} 
-                                disabled={isLinkingFlow[suite.suiteId]}
-                                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition"
+                                onClick={() => handleRunTests(suite.suiteId)}
+                                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                               >
-                                {isLinkingFlow[suite.suiteId] ? <Loader2 size={16} className="animate-spin" /> : null}
-                                Link as E2E Flow
+                                <Play size={14} />
+                                Run Tests
                               </button>
-                            )}
-                            {suite.isE2eFlow && (
-                              <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-emerald-500/20 flex items-center gap-2">
-                                <CheckCircle2 size={16} /> E2E Flow Linked
-                              </span>
-                            )}
+                            </div>
                           </div>
+                          {suite.isE2eFlow && (
+                            <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg text-sm font-bold border border-emerald-500/20 flex items-center gap-2 w-fit mb-3">
+                              <CheckCircle2 size={16} /> E2E Flow Linked
+                            </span>
+                          )}
                           {isLoadingItems[suite.suiteId] ? (
                             <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
                               <Loader2 size={16} className="animate-spin" /> Loading test cases...
