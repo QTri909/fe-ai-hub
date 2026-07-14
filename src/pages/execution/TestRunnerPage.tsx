@@ -83,30 +83,44 @@ export const TestRunnerPage = () => {
     poll();
   };
 
-  const handleRun = async () => {
-    if (selectedSuiteIds.length === 0) return;
-    const suiteId = selectedSuiteIds[0]; 
-    
-    setIsRunning(true);
-    setStatus('Preparing environment...');
-    setLogs(['Execution queued. Waiting for tests to finish...']);
-    setStructuredResults(null);
-    
-    try {
-      await httpClient.post(`/core-management-service/api/v1/test-pipeline/execute`, {
-        testSuiteIds: selectedSuiteIds,
-        baseUrl: baseUrl || null
-      });
+    const handleRun = async () => {
+      if (selectedSuiteIds.length === 0) return;
+      const suiteId = selectedSuiteIds[0]; 
       
-      setStatus('Running Test Scripts...');
-      pollExecutionResults(suiteId);
+      setIsRunning(true);
+      setStatus('Preparing environment...');
+      setLogs(['Execution started. Running tests...']);
+      setStructuredResults(null);
       
-    } catch (error) {
-      console.error("Failed to start execution", error);
-      setIsRunning(false);
-      setStatus('Failed');
-    }
-  };
+      try {
+        // Gọi execution-engine-service để chạy suite
+const res = await testSuiteApi.executeTestSuite(suiteId, baseUrl || undefined);
+        
+        // Kết quả trả về trực tiếp (không async)
+        setIsRunning(false);
+        setStatus(res.status || 'Completed');
+        
+        if (res.playwrightResultsRaw) {
+          try {
+            const pwData = JSON.parse(res.playwrightResultsRaw);
+            setStructuredResults({
+              playwright: pwData,
+              expected: res.results
+            });
+          } catch (e) {
+            console.error("Failed to parse JSON result", e);
+            setStructuredResults({ expected: res.results });
+          }
+        } else {
+          setStructuredResults({ expected: res.results });
+        }
+        
+      } catch (error) {
+        console.error("Failed to start execution", error);
+        setIsRunning(false);
+        setStatus('Failed');
+      }
+    };
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] p-8 max-w-[1400px] mx-auto w-full bg-slate-50 text-slate-900">
@@ -258,51 +272,40 @@ export const TestRunnerPage = () => {
               </div>
             )}
 
-            {/* Structured Test Results Detail */}
+{/* Structured Test Results Detail - Format from Execution Engine Service */}
             {structuredResults && (
               <div className="flex flex-col gap-4">
                 
-                {/* Individual Test Cases */}
+                {/* Summary Stats */}
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                    <div className="text-emerald-600 font-bold text-2xl">{structuredResults.passed || 0}</div>
+                    <div className="text-emerald-500 text-xs font-medium">Passed</div>
+                  </div>
+                  <div className="bg-red-50 p-3 rounded-xl border border-red-100">
+                    <div className="text-red-600 font-bold text-2xl">{structuredResults.failed || 0}</div>
+                    <div className="text-red-500 text-xs font-medium">Failed</div>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                    <div className="text-blue-600 font-bold text-2xl">{structuredResults.total || 0}</div>
+                    <div className="text-blue-500 text-xs font-medium">Total</div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <div className="text-gray-700 font-bold text-2xl">{structuredResults.passRate?.toFixed(1) || 0}%</div>
+                    <div className="text-gray-500 text-xs font-medium">Pass Rate</div>
+                  </div>
+                </div>
+
+                {/* Individual Test Cases - Array format from TestSuiteRunResponse */}
                 <div className="space-y-4 mt-2">
-                  {Object.entries(structuredResults.expected || {}).map(([tcCode, steps]: any) => {
-                    // Find matching playwright result for this TC
-                    let pwSpec = null;
-                    const allSpecs: any[] = [];
-                    const collectSpecs = (suites: any[]) => {
-                      for (const suite of suites || []) {
-                        const suiteSpecs = (suite.specs || []).map((s: any) => ({
-                          ...s,
-                          _suiteTitle: suite.title,
-                          _suiteFile: suite.file
-                        }));
-                        allSpecs.push(...suiteSpecs);
-                        collectSpecs(suite.suites || []);
-                      }
-                    };
-                    collectSpecs(structuredResults.playwright?.suites || []);
-                    pwSpec = allSpecs.find((s: any) => 
-                      s.title?.includes(tcCode) || 
-                      s.file?.includes(tcCode) ||
-                      s._suiteTitle?.includes(tcCode) ||
-                      s._suiteFile?.includes(tcCode)
-                    );
-
-                    const globalErrorsExist = structuredResults.playwright?.errors?.length > 0;
-                    const isPassed = pwSpec?.ok === true;
-                    const isFailed = (pwSpec && !pwSpec.ok) || (!pwSpec && globalErrorsExist);
-                    
-                    // Extract step results from playwright
-                    const pwSteps: any[] = pwSpec?.tests?.[0]?.results?.[0]?.steps || [];
-                    const failedStep = pwSteps.find((s: any) => s.error);
-                    const errorMsg = failedStep?.error?.message
-                      || pwSpec?.tests?.[0]?.results?.[0]?.error?.message
-                      || pwSpec?.tests?.[0]?.results?.[0]?.errors?.[0]?.message;
-
-                    // Get TC title from playwright spec
-                    const tcTitle = pwSpec?.title?.replace(tcCode + ': ', '') || tcCode;
+                  {(structuredResults.expected || []).map((result: any, idx: number) => {
+                    const isPassed = result.status === 'PASSED';
+                    const isFailed = result.status === 'FAILED';
+                    const tcCode = result.testCaseCode || `TC-${idx}`;
+                    const tcTitle = result.title || tcCode;
 
                     return (
-                      <div key={tcCode} className={`rounded-xl border overflow-hidden transition-all shadow-sm ${
+                      <div key={idx} className={`rounded-xl border overflow-hidden transition-all shadow-sm ${
                         isPassed ? 'border-emerald-200 bg-white' 
                         : isFailed ? 'border-red-200 bg-white' 
                         : 'border-gray-200 bg-white'
@@ -319,61 +322,36 @@ export const TestRunnerPage = () => {
                              : <div className="w-5 h-5 rounded-full bg-gray-300 flex-shrink-0" />}
                             <div>
                               <span className="font-bold text-gray-900">{tcCode}</span>
-                              {pwSpec?.title && (
-                                <span className="text-gray-500 text-sm ml-2 font-medium">{tcTitle}</span>
-                              )}
+                              <span className="text-gray-500 text-sm ml-2 font-medium">{tcTitle}</span>
                             </div>
                           </div>
                           {isPassed && <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Passed</span>}
                           {isFailed && <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">Failed</span>}
-                          {!isPassed && !isFailed && <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">Not Run</span>}
                         </div>
 
-                        {/* Step breakdown for failed TCs */}
-                        {isFailed && pwSteps.length > 0 && (
+                        {/* Step breakdown for TCs */}
+                        {isFailed && (result.stepResults || result.consoleOutput) && (
                           <div className="border-t border-red-100 bg-white">
-                            {pwSteps.map((step: any, idx: number) => {
-                              const stepFailed = !!step.error;
-                              const stepPassed = !step.error && step.duration > 0;
-                              return (
-                                <div key={idx} className={`flex items-start gap-3 px-5 py-3 border-b border-gray-100 last:border-0 ${stepFailed ? 'bg-red-50/30' : ''}`}>
-                                  <div className="flex-shrink-0 mt-0.5">
-                                    {stepFailed 
-                                      ? <XCircle size={16} className="text-red-500" />
-                                      : stepPassed 
-                                        ? <CheckCircle2 size={16} className="text-emerald-500" />
-                                        : <div className="w-4 h-4 rounded-full bg-gray-200" />}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <span className={`text-sm font-medium ${stepFailed ? 'text-red-800' : 'text-gray-700'}`}>
-                                      {step.title}
-                                    </span>
-                                    {stepFailed && step.error?.message && (
-                                      <div className="mt-2 bg-red-50 p-3 rounded-lg border border-red-100">
-                                        <pre className="text-xs text-red-800 font-mono whitespace-pre-wrap break-all max-h-32 overflow-auto">
-                                          {step.error.message.split('\n').slice(0, 5).join('\n')}
-                                        </pre>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <span className="text-xs font-medium text-gray-400 flex-shrink-0">{step.duration}ms</span>
+                            {result.stepResults && result.stepResults.map((step: any, sIdx: number) => (
+                              <div key={sIdx} className="flex items-start gap-3 px-5 py-3 border-b border-gray-100 last:border-0">
+                                <div className="flex-shrink-0 mt-0.5">
+                                  <XCircle size={16} className="text-red-500" />
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Fallback error if no steps (global error or old-style scripts) */}
-                        {isFailed && pwSteps.length === 0 && errorMsg && (
-                          <div className="border-t border-red-100 p-4 bg-red-50/50">
-                            <pre className="text-sm text-red-800 font-mono whitespace-pre-wrap break-all max-h-32 overflow-auto">{errorMsg.split('\n').slice(0, 6).join('\n')}</pre>
-                          </div>
-                        )}
-                        {isFailed && pwSteps.length === 0 && !errorMsg && globalErrorsExist && (
-                          <div className="border-t border-red-100 p-4 bg-red-50/50">
-                            <pre className="text-sm text-red-800 font-mono whitespace-pre-wrap break-all max-h-32 overflow-auto">
-                              {structuredResults.playwright?.errors.map((e: any) => e.message || e).join('\n').split('\n').slice(0, 6).join('\n')}
-                            </pre>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-medium text-red-800">{step.actionDescription || step.title}</span>
+                                  {step.actualResult && (
+                                    <pre className="text-xs text-red-700 mt-1 font-mono whitespace-pre-wrap break-all max-h-20 overflow-auto">
+                                      {step.actualResult.split('\n').slice(0, 3).join('\n')}
+                                    </pre>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            {result.consoleOutput && !result.stepResults && (
+                              <div className="border-t border-red-100 p-4 bg-red-50/50">
+                                <pre className="text-sm text-red-800 font-mono whitespace-pre-wrap break-all max-h-32 overflow-auto">{result.consoleOutput}</pre>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

@@ -42,8 +42,8 @@ export const testSuiteApi = {
     return response.data;
   },
 
-  executeTestSuites: async (testSuiteIds: number[], baseUrl?: string): Promise<any> => {
-    const response = await httpClient.post(`/core-management-service/api/v1/test-pipeline/execute`, { testSuiteIds, baseUrl });
+  executeTestSuite: async (suiteId: number, baseUrl?: string): Promise<any> => {
+    const response = await httpClient.post(`/execution-engine-service/api/execution/run-suite`, { suiteId, baseUrl });
     return response.data;
   },
 
@@ -52,13 +52,13 @@ export const testSuiteApi = {
     return response.data;
   },
 
-  getExecutionLogs: async (suiteId: number): Promise<{logs: string}> => {
-    const response = await httpClient.get(`/core-management-service/api/v1/test-pipeline/logs/${suiteId}`);
-    return response.data;
-  },
-
-  getExecutionResults: async (suiteId: number): Promise<any> => {
-    const response = await httpClient.get(`/core-management-service/api/v1/test-pipeline/results/${suiteId}`);
-    return response.data;
-  }
+   getExecutionLogs: async (runId: number): Promise<{logs: string}> => {
+     const response = await httpClient.get(`/core-management-service/api/v1/test-pipeline/logs/${runId}`);
+     return response.data;
+   },
+   
+   getExecutionResults: async (runId: number): Promise<any> => {
+     const response = await httpClient.get(`/core-management-service/api/v1/test-pipeline/results/${runId}`);
+     return response.data;
+   }
 };
