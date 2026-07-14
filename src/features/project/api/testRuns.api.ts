@@ -49,14 +49,21 @@ export interface TestStepResult {
     actualResult: string;
     screenshotUrl?: string;
     videoUrl?: string;
+    testStep?: {
+        stepOrder: number;
+        actionDescription: string;
+        expectedResult?: string;
+    };
 }
 
 export const testRunApi = {
     getRunsByProject: async (projectId: string): Promise<TestRun[]> => {
-        return httpClient.get(`/test-runs/project/${projectId}`);
+        const response = await httpClient.get(`/core-management-service/api/v1/test-runs/project/${projectId}`);
+        return response.data;
     },
     
     getRunDetails: async (runId: number): Promise<TestRun> => {
-        return httpClient.get(`/test-runs/${runId}`);
+        const response = await httpClient.get(`/core-management-service/api/v1/test-runs/${runId}`);
+        return response.data;
     }
 };

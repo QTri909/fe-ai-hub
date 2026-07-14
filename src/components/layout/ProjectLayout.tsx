@@ -16,6 +16,7 @@ export const ProjectLayout = () => {
     { name: 'Requirements', path: `/projects/${projectId}/requirements`, icon: 'list_alt' },
     { name: 'Test Cases', path: `/projects/${projectId}/test-cases`, icon: 'checklist' },
     { name: 'Test Suites', path: `/projects/${projectId}/test-suites`, icon: 'biotech' },
+    { name: 'Test Runs', path: `/projects/${projectId}/test-runs`, icon: 'history' },
     { name: 'AI Agents', path: `/projects/${projectId}/test-runner`, icon: 'smart_toy' },
   ];
 

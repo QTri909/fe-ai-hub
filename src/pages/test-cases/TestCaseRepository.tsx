@@ -213,7 +213,7 @@ const handleGenerateScript = async () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Test Case Repository</h1>
         <button 
-          onClick={() => navigate('/test-runner')}
+          onClick={() => navigate(`/projects/${projectId}/test-runner`)}
           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
         >
           <Play size={18} fill="currentColor" />

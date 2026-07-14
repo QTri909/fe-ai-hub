@@ -39,6 +39,11 @@ export const TestGenerationWizard = () => {
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   const [isLoadingSuites, setIsLoadingSuites] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // UI Exploration settings
+  const [baseUrl, setBaseUrl] = useState<string>('https://automationexercise.com');
+  const [enableUIExploration, setEnableUIExploration] = useState<boolean>(false);
+  const [explorationStatus, setExplorationStatus] = useState<string>('');
 
   useEffect(() => {
     if (projectId && reqId) {
@@ -49,10 +54,9 @@ export const TestGenerationWizard = () => {
     }
   }, [projectId, reqId]);
 
-  const [baseUrl, setBaseUrl] = useState<string>('https://example.com');
-  
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setExplorationStatus('');
     try {
       const response = await httpClient.post(`/core-management-service/api/v1/requirements/${reqId}/generate-test-cases`, {
         scriptLanguage: 'JAVASCRIPT',
@@ -61,7 +65,8 @@ export const TestGenerationWizard = () => {
         generateScript: false,
         generateTestData: false,
         maxLajRetries: 3,
-        baseUrl: baseUrl
+        baseUrl: baseUrl,
+        enableUIExploration: enableUIExploration
       }, {
         timeout: 120000 // 2 minutes for AI generation
       });
@@ -177,6 +182,37 @@ export const TestGenerationWizard = () => {
               <div className="p-4 text-center">
                 <p className="text-sm text-gray-500">No acceptance criteria defined</p>
               </div>
+            )}
+          </div>
+
+          {/* UI Exploration Settings */}
+          <div className="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-300">Base URL</label>
+              <input
+                type="text"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="https://automationexercise.com"
+                className="w-48 bg-gray-900 border border-gray-700 text-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="uiExploration"
+                checked={enableUIExploration}
+                onChange={(e) => setEnableUIExploration(e.target.checked)}
+                className="rounded border-gray-700 bg-gray-900"
+              />
+              <label htmlFor="uiExploration" className="text-sm text-gray-300 cursor-pointer">
+                Enable UI Exploration Mode
+              </label>
+            </div>
+            
+            {explorationStatus && (
+              <div className="text-xs text-indigo-400 mt-1">{explorationStatus}</div>
             )}
           </div>
 

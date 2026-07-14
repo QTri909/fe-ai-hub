@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, XCircle, Clock, FileText, Loader2, AlertCircle, Bug, RefreshCw, Download, Target, Square, Code, Minus } from 'lucide-react';
-import { testRunApi, TestRun, TestRunItem } from '@/features/project/api/testRuns.api';
+import { testRunApi } from '@/features/project/api/testRuns.api';
+import type { TestRun, TestRunItem } from '@/features/project/api/testRuns.api';
 
 export function TestRunDetailsPage() {
     const { projectId, runId } = useParams();
@@ -39,7 +40,7 @@ export function TestRunDetailsPage() {
         <div className="p-8 max-w-[1400px] mx-auto text-gray-900 min-h-screen bg-gray-50/50">
             
             <button 
-                onClick={() => navigate(`/project/${projectId}/test-runs`)}
+                onClick={() => navigate(`/projects/${projectId}/test-runs`)}
                 className="mb-4 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition font-medium"
             >
                 <ArrowLeft size={18} /> Back to Test Runs
@@ -156,8 +157,8 @@ export function TestRunDetailsPage() {
                                     <div className="flex items-center gap-3 overflow-hidden flex-1">
                                         {isPassed ? <CheckCircle2 className="text-emerald-500 shrink-0" size={18} /> : <XCircle className="text-red-500 shrink-0" size={18} />}
                                         <div className="truncate flex items-center gap-2 flex-1">
-                                            <p className="text-sm font-bold truncate text-gray-900">{item.testCase.testCaseCode}</p>
-                                            <p className="text-sm text-gray-500 truncate">{item.testCase.title || 'Untitled'}</p>
+                                            <p className="text-sm font-bold truncate text-gray-900">{item.testCase?.testCaseCode || 'UNKNOWN'}</p>
+                                            <p className="text-sm text-gray-500 truncate">{item.testCase?.title || 'Untitled'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0 ml-2">
@@ -184,7 +185,7 @@ export function TestRunDetailsPage() {
                             <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-6">
                                 <div className="flex items-center gap-4">
                                     <h2 className="text-xl font-extrabold text-gray-900">
-                                        {selectedItem.testCase.testCaseCode} <span className="font-semibold text-gray-600 ml-2">{selectedItem.testCase.title}</span>
+                                        {selectedItem.testCase?.testCaseCode || 'UNKNOWN'} <span className="font-semibold text-gray-600 ml-2">{selectedItem.testCase?.title || ''}</span>
                                     </h2>
                                     {selectedItem.status === 'FAILED' ? (
                                         <span className="px-3 py-1 rounded-full text-sm font-bold bg-red-50 text-red-700 border border-red-200 flex items-center gap-1.5">
@@ -294,33 +295,33 @@ export function TestRunDetailsPage() {
                                 );
                             })()}
 
-                                    {selectedItem.testResult?.executionLog && (
-                                        <div className="flex items-start gap-4 mt-8">
-                                            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0 mt-2">
-                                                <Code size={16} className="text-red-600" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="text-sm font-bold text-gray-900 mb-2">Error Log</h3>
-                                                <div className="bg-red-50/50 border border-red-100 rounded-xl p-5">
-                                                    <pre className="text-sm font-mono text-red-800 whitespace-pre-wrap overflow-x-auto">
-                                                        {selectedItem.testResult.executionLog}
-                                                    </pre>
-                                                </div>
-                                            </div>
+                            {selectedItem.testResult?.executionLog && (
+                                <div className="flex items-start gap-4 mt-8">
+                                    <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0 mt-2">
+                                        <Code size={16} className="text-red-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-sm font-bold text-gray-900 mb-2">Error Log</h3>
+                                        <div className="bg-red-50/50 border border-red-100 rounded-xl p-5">
+                                            <pre className="text-sm font-mono text-red-800 whitespace-pre-wrap overflow-x-auto">
+                                                {selectedItem.testResult.executionLog}
+                                            </pre>
                                         </div>
-                                    )}
+                                    </div>
+                                </div>
+                            )}
 
-                                    {selectedItem.screenshotUrl && (
-                                        <div className="flex items-start gap-4 mt-8">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                                                <FileText size={16} className="text-gray-600" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="text-sm font-bold text-gray-900 mb-2">Failure Screenshot</h3>
-                                                <img src={selectedItem.screenshotUrl.startsWith('http') ? selectedItem.screenshotUrl : `/${selectedItem.screenshotUrl}`} alt="Error Screenshot" className="rounded-xl border border-gray-200 shadow-sm max-w-full" />
-                                            </div>
-                                        </div>
-                                    )}
+                            {selectedItem.screenshotUrl && (
+                                <div className="flex items-start gap-4 mt-8">
+                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
+                                        <FileText size={16} className="text-gray-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-sm font-bold text-gray-900 mb-2">Failure Screenshot</h3>
+                                        <img src={selectedItem.screenshotUrl.startsWith('http') ? selectedItem.screenshotUrl : `/${selectedItem.screenshotUrl}`} alt="Error Screenshot" className="rounded-xl border border-gray-200 shadow-sm max-w-full" />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="h-full flex items-center justify-center text-gray-400 flex-col gap-3">
