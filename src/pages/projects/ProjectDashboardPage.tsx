@@ -34,7 +34,6 @@ export const ProjectDashboardPage = () => {
     try {
       setIsSyncing(true);
       await projectApi.syncProjectRequirements(activeWorkspace.id, project.projectKey);
-      // Optional: Refetch project details if sync updates anything on the project itself
       const data = await projectApi.getProjectById(project.id);
       setProject(data);
     } catch (error) {
@@ -42,6 +41,20 @@ export const ProjectDashboardPage = () => {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleProjectSettings = () => {
+    console.log('Project Settings clicked');
+    // TODO: Implement project settings functionality
+  };
+
+  const handleViewAllActivity = () => {
+    console.log('View All Activity clicked');
+    // TODO: Implement view all activity functionality
+  };
+
+  const handleStartAIGeneration = () => {
+    navigate(`/projects/${projectId}/requirements`);
   };
 
   if (isLoading) {
@@ -98,22 +111,25 @@ export const ProjectDashboardPage = () => {
               </span>
             </div>
             <p className="text-on-surface-variant font-body-md max-w-2xl mt-2 leading-relaxed">
-              {project.description || 'No description provided for this project.'}
+              No description provided for this project.
             </p>
             <div className="flex items-center gap-6 mt-4 text-xs font-medium text-on-surface-variant">
               <span className="flex items-center gap-1.5 bg-surface-container py-1 px-3 rounded-full">
                 <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                Created: {new Date(project.createdAt).toLocaleDateString()}
+                Created: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A'}
               </span>
               <span className="flex items-center gap-1.5 bg-surface-container py-1 px-3 rounded-full">
                 <span className="material-symbols-outlined text-[14px]">sync</span>
-                Last Synced: {new Date(project.updatedAt).toLocaleDateString()}
+                Last Synced: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : 'N/A'}
               </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-5 py-2.5 rounded-lg border border-outline-variant hover:bg-surface-container-high transition-colors font-semibold text-sm text-on-surface flex items-center gap-2 cursor-pointer shadow-sm">
+          <button 
+            onClick={handleProjectSettings}
+            className="px-5 py-2.5 rounded-lg border border-outline-variant hover:bg-surface-container-high transition-colors font-semibold text-sm text-on-surface flex items-center gap-2 cursor-pointer shadow-sm"
+          >
             <span className="material-symbols-outlined text-[18px]">settings</span>
             Settings
           </button>
@@ -186,7 +202,12 @@ export const ProjectDashboardPage = () => {
                 <span className="material-symbols-outlined text-primary">dynamic_feed</span>
                 Recent Activity
               </h2>
-              <button className="text-sm font-semibold text-primary hover:underline cursor-pointer">View All</button>
+              <button 
+                onClick={handleViewAllActivity}
+                className="text-sm font-semibold text-primary hover:underline cursor-pointer"
+              >
+                View All
+              </button>
             </div>
             <div className="p-12 flex flex-col items-center justify-center text-center">
               <span className="material-symbols-outlined text-[48px] text-outline mb-4 opacity-50">history</span>
@@ -242,7 +263,10 @@ export const ProjectDashboardPage = () => {
           <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/30 shadow-sm bg-gradient-to-br from-surface-container-lowest to-primary/5">
             <h2 className="text-lg font-bold text-on-surface mb-2">Generate Tests</h2>
             <p className="text-sm text-on-surface-variant mb-6">Use AI to automatically generate test cases from your requirements.</p>
-            <button className="w-full py-3 rounded-lg bg-primary text-on-primary font-bold shadow-md shadow-primary/20 hover:shadow-lg hover:brightness-110 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <button 
+              onClick={handleStartAIGeneration}
+              className="w-full py-3 rounded-lg bg-primary text-on-primary font-bold shadow-md shadow-primary/20 hover:shadow-lg hover:brightness-110 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
               <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
               Start AI Generation
             </button>

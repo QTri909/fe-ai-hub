@@ -4,3 +4,4 @@ export { Footer } from './Footer';
 export { MainWrapper } from './MainWrapper';
 export { AppLayout } from './AppLayout';
 export { ProjectLayout } from './ProjectLayout';
+export { WorkspaceLayout } from './WorkspaceLayout';

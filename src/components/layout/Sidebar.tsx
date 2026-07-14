@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/core/constants';
 
 export interface NavItem {
   name: string;
@@ -24,12 +25,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   className = '' 
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleWorkspaceSelector = () => {
+    navigate(ROUTES.WORKSPACE_LIST);
+  };
+
+  const handleSettings = () => {
+    console.log('Settings clicked');
+    // TODO: Implement settings navigation when route is available
+  };
 
   return (
     <aside className={`fixed left-0 top-0 h-full w-64 bg-surface-container-lowest border-r border-outline-variant/30 flex flex-col py-4 px-4 z-50 ${className}`}>
       {/* Workspace Selector */}
       <div className="px-2 mb-4">
-        <div className="flex items-center justify-between p-2 bg-surface-container-high rounded-xl border border-outline-variant/20 hover:bg-surface-bright transition-all cursor-pointer group">
+        <button 
+          onClick={handleWorkspaceSelector}
+          className="w-full flex items-center justify-between p-2 bg-surface-container-high rounded-xl border border-outline-variant/20 hover:bg-surface-bright transition-all cursor-pointer group"
+        >
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
               <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdzGLJ0OfLNEylOJDudA6QG8FOYfl1hPs6tzqbrtSSH9d6u60f9Tx8xHX1OVSyGt9EhkhUBNZ2fz5b_fqc6DWuYgDVdEFwcaHkbWA44uYMdBJ0qQITHrvaIpS0tNF1MY_WXXiQ6kg78yteMskw27gDfNkehmAjGDM4ArGfE-VHEPkxgHHB_UzZSHN-ESrdrykf1Hi7ZGh7PLLX9UowE37hEKrakN000PFjj-k86_yEj-k9f1LvMkSDUNTOJjnV2EFiCqNjJLnE7EQ"/>
@@ -40,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
           <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors text-sm">unfold_more</span>
-        </div>
+        </button>
       </div>
 
       <nav className="flex-1 space-y-1">
@@ -74,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
         
         <button 
-          onClick={() => {}}
+          onClick={handleSettings}
           className="w-full flex items-center gap-3 px-4 py-2 text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 mt-auto"
         >
           <span className="material-symbols-outlined text-sm">settings</span>
@@ -101,3 +115,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
   );
 };
+
+export default Sidebar;

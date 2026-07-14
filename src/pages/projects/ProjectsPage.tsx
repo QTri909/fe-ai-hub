@@ -33,7 +33,7 @@ export const ProjectsPage = () => {
     try {
       setIsSyncing(true);
       await projectApi.syncProjects(activeWorkspace.id);
-      await fetchProjects(); // Refresh the list after sync
+      await fetchProjects();
     } catch (error) {
       console.error('Failed to sync projects', error);
       alert('Failed to sync projects from Jira. Please check your connection.');
@@ -61,12 +61,18 @@ export const ProjectsPage = () => {
             <input className="bg-surface-container-high border-none rounded-md pl-10 pr-4 py-2 text-sm text-on-surface w-64 focus:ring-2 focus:ring-primary/50 transition-all outline-none" placeholder="Search projects..." type="text"/>
           </div>
           {/* Filter */}
-          <button className="flex items-center gap-1 px-4 py-2 rounded-md bg-surface-container-highest/30 border border-outline-variant/50 hover:bg-surface-container-highest/50 transition-colors text-sm font-medium cursor-pointer">
+          <button 
+            onClick={() => console.log('Filter View clicked')}
+            className="flex items-center gap-1 px-4 py-2 rounded-md bg-surface-container-highest/30 border border-outline-variant/50 hover:bg-surface-container-highest/50 transition-colors text-sm font-medium cursor-pointer"
+          >
             <span className="material-symbols-outlined text-[18px]">filter_list</span>
             <span>Filter View</span>
           </button>
           {/* New Project */}
-          <button className="flex items-center gap-1 px-6 py-2 rounded-md bg-tertiary-container text-on-tertiary-container font-semibold text-sm hover:brightness-110 active:scale-95 transition-all shadow-sm cursor-pointer">
+          <button 
+            onClick={() => console.log('New Project clicked')}
+            className="flex items-center gap-1 px-6 py-2 rounded-md bg-tertiary-container text-on-tertiary-container font-semibold text-sm hover:brightness-110 active:scale-95 transition-all shadow-sm cursor-pointer"
+          >
             <span className="material-symbols-outlined text-[18px]">add</span>
             <span>New Project</span>
           </button>
@@ -118,7 +124,11 @@ export const ProjectsPage = () => {
           </div>
         ) : (
           projects.map(project => (
-            <div key={project.id} className="bg-surface-container-low rounded-lg border border-outline-variant/50 p-6 transition-all duration-300 card-glow group">
+            <div 
+              key={project.id} 
+              className="bg-surface-container-low rounded-lg border border-outline-variant/50 p-6 transition-all duration-300 card-glow group cursor-pointer"
+              onClick={() => navigate(`/projects/${project.id}`)}
+            >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
@@ -129,7 +139,10 @@ export const ProjectsPage = () => {
                     <code className="font-code text-[11px] bg-surface-container-highest/50 px-1.5 py-0.5 rounded text-outline uppercase">KEY: {project.projectKey}</code>
                   </div>
                 </div>
-                <button className="text-on-surface-variant hover:bg-surface-bright/50 p-1 rounded-full transition-colors cursor-pointer">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); console.log('Project menu clicked for', project.name); }}
+                  className="text-on-surface-variant hover:bg-surface-bright/50 p-1 rounded-full transition-colors cursor-pointer"
+                >
                   <span className="material-symbols-outlined">more_vert</span>
                 </button>
               </div>
@@ -154,14 +167,14 @@ export const ProjectsPage = () => {
                 </div>
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={() => setMappingProject(project)}
+                    onClick={(e) => { e.stopPropagation(); setMappingProject(project); }}
                     className="text-xs font-bold text-tertiary hover:underline transition-all cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[14px]">schema</span>
                     Data Mapping
                   </button>
                   <button 
-                    onClick={() => navigate(`/projects/${project.id}`)}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}
                     className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer"
                   >
                     View Details
