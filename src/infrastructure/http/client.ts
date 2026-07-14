@@ -8,10 +8,10 @@ export const httpClient = axios.create(axiosConfig);
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (token: string) => void;
-  reject: (error: any) => void;
+  reject: (error: unknown) => void;
 }> = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -22,9 +22,23 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+const isPublicAuthRequest = (config: InternalAxiosRequestConfig) => {
+  const url = config.url || '';
+  return [
+    '/auth-service/api/v1/auth/login',
+    '/auth-service/api/v1/auth/register',
+    '/auth-service/api/v1/auth/refresh',
+    '/oauth2/authorization/google',
+  ].some((path) => url.includes(path));
+};
+
 // Request interceptor to inject the access token from store
 httpClient.interceptors.request.use(
   (config) => {
+    if (isPublicAuthRequest(config)) {
+      return config;
+    }
+
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
@@ -53,6 +67,10 @@ httpClient.interceptors.response.use(
       (error.response && (error.response.status === 401 || error.response.status === 403)) || 
       (error.message === 'Network Error' && !error.response);
 
+    if (isPublicAuthRequest(originalRequest) || originalRequest.url?.includes('/auth-service/api/v1/auth/me')) {
+      return Promise.reject(error);
+    }
+
     if (isUnauthorized && !originalRequest._retry) {
       originalRequest._retry = true;
       const authStore = useAuthStore.getState();
@@ -77,7 +95,7 @@ httpClient.interceptors.response.use(
       try {
         // Create a separate instance to avoid triggering this interceptor again
         const refreshClient = axios.create(axiosConfig);
-        const { data } = await refreshClient.post<{ accessToken: string }>('/auth-service/api/v1/auth/refresh');
+const { data } = await refreshClient.post<{ accessToken: string }>('/auth-service/api/v1/auth/refresh');
         
         const newAccessToken = data.accessToken;
         authStore.setAccessToken(newAccessToken);
