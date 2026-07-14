@@ -140,18 +140,27 @@ export const routes: RouteObject[] = [
         ]
       },
       {
-        path: ROUTES.WORKSPACE,
-        lazy: async () => {
-          const { WorkspacePage } = await import('@/pages/workspace');
-          return { Component: WorkspacePage };
-        },
-      },
-      {
         path: ROUTES.WORKSPACE_LIST,
         lazy: async () => {
-          const { WorkspaceListPage } = await import('@/pages/workspace-list');
-          return { Component: WorkspaceListPage };
+          const { WorkspaceLayout } = await import('@/components/layout/WorkspaceLayout');
+          return { Component: WorkspaceLayout };
         },
+        children: [
+          {
+            index: true,
+            lazy: async () => {
+              const { WorkspaceListPage } = await import('@/pages/workspace-list');
+              return { Component: WorkspaceListPage };
+            },
+          },
+          {
+            path: 'create',
+            lazy: async () => {
+              const { WorkspacePage } = await import('@/pages/workspace');
+              return { Component: WorkspacePage };
+            },
+          },
+        ]
       },
     ],
   },

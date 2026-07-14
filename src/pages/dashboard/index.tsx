@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useWorkspaceStore } from '@/core/store/workspace.store';
 import { projectApi } from '@/features/project/api/project.api';
 import type { Project } from '@/features/project/types/project.types';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/core/constants';
 
 export const DashboardPage = () => {
   const activeWorkspace = useWorkspaceStore(state => state.activeWorkspace);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
 
     const fetchProjects = async (showLoading = true) => {
       if (!activeWorkspace) return;
@@ -34,6 +37,29 @@ export const DashboardPage = () => {
     return () => clearInterval(intervalId);
   }, [activeWorkspace]);
 
+  const handleFilterView = () => {
+    console.log('Filter View clicked');
+    // TODO: Implement filter functionality
+  };
+
+  const handleExportReport = () => {
+    console.log('Export Report clicked');
+    // TODO: Implement export functionality
+  };
+
+  const handleViewAllProjects = () => {
+    navigate(ROUTES.PROJECTS);
+  };
+
+  const handleViewProject = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
+  };
+
+  const handleRefreshIssues = () => {
+    console.log('Refresh issues clicked');
+    // TODO: Implement refresh functionality
+  };
+
   return (
     <div className="max-w-container-max mx-auto space-y-4">
       {/* Title & Actions */}
@@ -43,11 +69,17 @@ export const DashboardPage = () => {
           <p className="text-on-surface-variant font-body-md text-xs mt-1">Real-time automation health and sync status.</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-3 py-1.5 border border-outline-variant text-on-surface-variant font-label-md text-xs rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer">
+          <button 
+            onClick={handleFilterView}
+            className="flex items-center gap-2 px-3 py-1.5 border border-outline-variant text-on-surface-variant font-label-md text-xs rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer"
+          >
             <span className="material-symbols-outlined text-sm">filter_list</span>
             Filter View
           </button>
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-secondary text-on-secondary-fixed font-bold font-label-md text-xs rounded-lg hover:opacity-90 transition-all cursor-pointer">
+          <button 
+            onClick={handleExportReport}
+            className="flex items-center gap-2 px-3 py-1.5 bg-secondary text-on-secondary-fixed font-bold font-label-md text-xs rounded-lg hover:opacity-90 transition-all cursor-pointer"
+          >
             <span className="material-symbols-outlined text-sm">download</span>
             Export Report
           </button>
@@ -101,7 +133,12 @@ export const DashboardPage = () => {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-headline-md text-lg text-on-surface">Active Projects</h2>
-          <a className="text-primary font-label-md text-xs hover:underline cursor-pointer">View all</a>
+          <button 
+            onClick={handleViewAllProjects}
+            className="text-primary font-label-md text-xs hover:underline cursor-pointer"
+          >
+            View all
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {isLoading ? (
@@ -140,7 +177,10 @@ export const DashboardPage = () => {
                       <div className={`h-full rounded-full ${bars[i]}`}></div>
                     </div>
                   </div>
-                  <button className="w-full py-2 border border-outline-variant text-on-surface-variant font-bold text-xs rounded-lg group-hover:border-primary group-hover:text-primary transition-all cursor-pointer">
+                  <button 
+                    onClick={() => handleViewProject(project.id)}
+                    className="w-full py-2 border border-outline-variant text-on-surface-variant font-bold text-xs rounded-lg group-hover:border-primary group-hover:text-primary transition-all cursor-pointer"
+                  >
                     View Project
                   </button>
                 </div>
@@ -156,7 +196,10 @@ export const DashboardPage = () => {
           <h2 className="font-headline-md text-lg text-on-surface">Recent Jira Issues</h2>
           <div className="flex items-center gap-2">
             <span className="font-label-md text-on-surface-variant text-[10px]">Auto-Sync: 2m ago</span>
-            <button className="p-1 hover:bg-surface-container-high rounded-lg text-primary cursor-pointer">
+            <button 
+              onClick={handleRefreshIssues}
+              className="p-1 hover:bg-surface-container-high rounded-lg text-primary cursor-pointer"
+            >
               <span className="material-symbols-outlined text-sm">refresh</span>
             </button>
           </div>
