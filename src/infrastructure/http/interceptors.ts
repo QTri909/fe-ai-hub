@@ -9,6 +9,16 @@ let failedQueue: Array<{
   reject: (reason?: unknown) => void;
 }> = [];
 
+const isPublicAuthRequest = (config: InternalAxiosRequestConfig) => {
+  const url = config.url || '';
+  return [
+    '/auth-service/api/v1/auth/login',
+    '/auth-service/api/v1/auth/register',
+    '/auth-service/api/v1/auth/refresh',
+    '/oauth2/authorization/google',
+  ].some((path) => url.includes(path));
+};
+
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -24,6 +34,10 @@ export const setupInterceptors = (axiosInstance: AxiosInstance): void => {
   // Request Interceptor: Inject Access Token
   axiosInstance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
+      if (isPublicAuthRequest(config)) {
+        return config;
+      }
+
       const { accessToken } = useAuthStore.getState();
       if (accessToken && config.headers) {
         config.headers.Authorization = `Bearer ${accessToken}`;
@@ -48,6 +62,10 @@ export const setupInterceptors = (axiosInstance: AxiosInstance): void => {
 
       // Handle 401 Unauthorized (Access Token expired)
       const anyRequest = originalRequest as { _retry?: boolean; headers?: Record<string, string> };
+      if (isPublicAuthRequest(originalRequest as InternalAxiosRequestConfig)) {
+        return Promise.reject(error);
+      }
+
       if (error.response?.status === 401 && !anyRequest._retry) {
         if (isRefreshing) {
           return new Promise<string>((resolve, reject) => {
@@ -73,7 +91,7 @@ export const setupInterceptors = (axiosInstance: AxiosInstance): void => {
           try {
             logger.info('Access token expired. Requesting refresh...');
             // Direct request for token refresh via Cookie
-            const response = await axiosInstance.post('/auth-service/api/v1/auth/refresh', {}, {
+const response = await axiosInstance.post('/auth-service/api/v1/auth/refresh', {}, {
               withCredentials: true
             });
 
