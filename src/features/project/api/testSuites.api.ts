@@ -14,31 +14,31 @@ export interface TestSuite {
 
 export const testSuiteApi = {
   getTestSuitesByProject: async (projectId: string): Promise<TestSuite[]> => {
-    const response = await httpClient.get(`/core-management-service/api/test-suites/by-project/${projectId}`);
+    const response = await httpClient.get(`/core-management-service/api/v1/test-suites/by-project/${projectId}`);
     return response.data;
   },
   
   createTestSuite: async (data: { suiteName: string; description: string; projectId: string; testCaseIds: number[] }): Promise<TestSuite> => {
-    const response = await httpClient.post('/core-management-service/api/test-suites', data);
+    const response = await httpClient.post('/core-management-service/api/v1/test-suites', data);
     return response.data;
   },
 
   updateTestSuite: async (id: number, data: { suiteName: string; description: string; status: string }): Promise<TestSuite> => {
-    const response = await httpClient.put(`/core-management-service/api/test-suites/${id}`, data);
+    const response = await httpClient.put(`/core-management-service/api/v1/test-suites/${id}`, data);
     return response.data;
   },
 
   deleteTestSuite: async (id: number): Promise<void> => {
-    await httpClient.delete(`/core-management-service/api/test-suites/${id}`);
+    await httpClient.delete(`/core-management-service/api/v1/test-suites/${id}`);
   },
 
   addTestCasesToSuite: async (suiteId: number, testCaseIds: number[]): Promise<any> => {
-    const response = await httpClient.post(`/core-management-service/api/test-suites/${suiteId}/add-test-cases`, testCaseIds);
+    const response = await httpClient.post(`/core-management-service/api/v1/test-suites/${suiteId}/add-test-cases`, testCaseIds);
     return response.data;
   },
 
   linkFlow: async (suiteId: number): Promise<TestSuite> => {
-    const response = await httpClient.post(`/core-management-service/api/test-suites/${suiteId}/link-flow`);
+    const response = await httpClient.post(`/core-management-service/api/v1/test-suites/${suiteId}/link-flow`);
     return response.data;
   },
 
@@ -48,7 +48,7 @@ export const testSuiteApi = {
   },
 
   getTestSuiteItems: async (suiteId: number): Promise<any[]> => {
-    const response = await httpClient.get(`/core-management-service/api/test-suites/${suiteId}/items`);
+    const response = await httpClient.get(`/core-management-service/api/v1/test-suites/${suiteId}/items`);
     return response.data;
   },
 
