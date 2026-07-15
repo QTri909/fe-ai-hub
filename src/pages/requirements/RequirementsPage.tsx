@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus, Wand2, ListChecks } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { requirementApi, type Requirement } from '@/features/project/api/requirements.api';
+import { requirementApi } from '@/features/requirements';
+import type { Requirement } from '@/features/requirements';
 import { RequirementContent } from '@/components/common/RequirementContent';
 
 export const RequirementsPage = () => {
@@ -17,7 +18,7 @@ export const RequirementsPage = () => {
       if (!projectId) return;
       try {
         setIsLoading(true);
-        const data = await requirementApi.getRequirementsByProjectId(projectId, 0, 100);
+        const data = await requirementApi.getByProjectId(projectId, 0, 100);
         setRequirements(data.content || []);
       } catch (error) {
         console.error('Failed to fetch requirements', error);
@@ -36,8 +37,12 @@ export const RequirementsPage = () => {
         setIsAcLoading(true);
         const acList = await requirementApi.getAcceptanceCriteriaByRequirement(selectedReq.id);
         // Map backend shape to UI shape
-        const mapped = acList.map(ac => ({ id: String(ac.acId), content: ac.content, orderIndex: ac.orderIndex }));
-        setSelectedReq(prev => prev ? { ...prev, acceptanceCriteriaList: mapped } : prev);
+        const mapped = acList.map((ac) => ({
+          id: String(ac.acId),
+          content: ac.content,
+          orderIndex: ac.orderIndex,
+        }));
+        setSelectedReq((prev) => (prev ? { ...prev, acceptanceCriteriaList: mapped } : prev));
       } catch (error) {
         console.error('Failed to fetch acceptance criteria', error);
       } finally {
@@ -76,74 +81,98 @@ export const RequirementsPage = () => {
   };
 
   return (
-    <div className="flex h-full flex-col animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold font-headline-md text-on-surface">Requirements</h1>
-        <button className="flex items-center gap-2 bg-primary hover:brightness-110 active:scale-95 text-on-primary px-4 py-2 rounded-lg font-bold transition-all shadow-md shadow-primary/20">
+    <div className="animate-fade-in flex h-full flex-col">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="font-headline-md text-on-surface text-2xl font-bold">Requirements</h1>
+        <button className="bg-primary text-on-primary shadow-primary/20 flex items-center gap-2 rounded-lg px-4 py-2 font-bold shadow-md transition-all hover:brightness-110 active:scale-95">
           <Plus size={18} />
           New Requirement
         </button>
       </div>
 
-      <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl flex-1 flex flex-col overflow-hidden shadow-sm">
+      <div className="bg-surface-container-low border-outline-variant/30 flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm">
         {/* Toolbar */}
-        <div className="p-4 border-b border-outline-variant/30 flex items-center gap-4 bg-surface-container-lowest">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search requirements..." 
-              className="w-full bg-surface-container-high border border-outline-variant/30 text-on-surface rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+        <div className="border-outline-variant/30 bg-surface-container-lowest flex items-center gap-4 border-b p-4">
+          <div className="relative max-w-md flex-1">
+            <Search
+              className="text-on-surface-variant absolute top-1/2 left-3 -translate-y-1/2"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search requirements..."
+              className="bg-surface-container-high border-outline-variant/30 text-on-surface focus:ring-primary/50 w-full rounded-lg border py-2 pr-4 pl-10 transition-all focus:ring-2 focus:outline-none"
             />
           </div>
 
-          <button className="flex items-center gap-2 bg-surface-container-high border border-outline-variant/30 text-on-surface px-4 py-2 rounded-lg hover:bg-surface-container-highest transition-colors font-medium">
+          <button className="bg-surface-container-high border-outline-variant/30 text-on-surface hover:bg-surface-container-highest flex items-center gap-2 rounded-lg border px-4 py-2 font-medium transition-colors">
             <Filter size={18} />
             Filter
           </button>
         </div>
 
         {/* Main Area */}
-        <div className="flex flex-1 overflow-hidden bg-surface-container-lowest">
+        <div className="bg-surface-container-lowest flex flex-1 overflow-hidden">
           {/* Table */}
-          <div className={`flex-1 overflow-auto ${selectedReq ? 'border-r border-outline-variant/30' : ''}`}>
+          <div
+            className={`flex-1 overflow-auto ${selectedReq ? 'border-outline-variant/30 border-r' : ''}`}
+          >
             {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex h-64 items-center justify-center">
+                <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
               </div>
             ) : requirements.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <span className="material-symbols-outlined text-[48px] text-outline mb-4 opacity-50">description</span>
-                <p className="text-on-surface font-bold text-lg mb-2">No Requirements Found</p>
-                <p className="text-on-surface-variant text-sm max-w-sm">There are no requirements synced for this project. Try syncing from Jira or create a new one.</p>
+              <div className="flex h-64 flex-col items-center justify-center text-center">
+                <span className="material-symbols-outlined text-outline mb-4 text-[48px] opacity-50">
+                  description
+                </span>
+                <p className="text-on-surface mb-2 text-lg font-bold">No Requirements Found</p>
+                <p className="text-on-surface-variant max-w-sm text-sm">
+                  There are no requirements synced for this project. Try syncing from Jira or create
+                  a new one.
+                </p>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-surface-container-low sticky top-0 border-b border-outline-variant/30 shadow-sm z-10">
+              <table className="w-full border-collapse text-left">
+                <thead className="bg-surface-container-low border-outline-variant/30 sticky top-0 z-10 border-b shadow-sm">
                   <tr>
-                    <th className="p-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Key</th>
-                    <th className="p-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Title</th>
-                    <th className="p-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Type</th>
-                    <th className="p-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Status</th>
-                    <th className="p-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Priority</th>
+                    <th className="text-on-surface-variant p-4 text-xs font-bold tracking-wider uppercase">
+                      Key
+                    </th>
+                    <th className="text-on-surface-variant p-4 text-xs font-bold tracking-wider uppercase">
+                      Title
+                    </th>
+                    <th className="text-on-surface-variant p-4 text-xs font-bold tracking-wider uppercase">
+                      Type
+                    </th>
+                    <th className="text-on-surface-variant p-4 text-xs font-bold tracking-wider uppercase">
+                      Status
+                    </th>
+                    <th className="text-on-surface-variant p-4 text-xs font-bold tracking-wider uppercase">
+                      Priority
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {requirements.map(req => (
-                    <tr 
-                      key={req.id} 
+                  {requirements.map((req) => (
+                    <tr
+                      key={req.id}
                       onClick={() => setSelectedReq(req)}
-                      className={`border-b border-outline-variant/10 cursor-pointer hover:bg-surface-container-high/50 transition-colors ${selectedReq?.id === req.id ? 'bg-primary/5' : ''}`}
+                      className={`border-outline-variant/10 hover:bg-surface-container-high/50 cursor-pointer border-b transition-colors ${selectedReq?.id === req.id ? 'bg-primary/5' : ''}`}
                     >
-                      <td className="p-4 text-primary font-medium text-sm">{req.requirementKey}</td>
-                      <td className="p-4 text-on-surface font-medium text-sm max-w-xs truncate">{req.title}</td>
-                      <td className="p-4 text-on-surface-variant text-sm">{req.type || 'N/A'}</td>
+                      <td className="text-primary p-4 text-sm font-medium">{req.requirementKey}</td>
+                      <td className="text-on-surface max-w-xs truncate p-4 text-sm font-medium">
+                        {req.title}
+                      </td>
+                      <td className="text-on-surface-variant p-4 text-sm">{req.type || 'N/A'}</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase tracking-wider">
+                        <span className="bg-secondary/10 text-secondary border-secondary/20 rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase">
                           {req.status || 'N/A'}
                         </span>
                       </td>
-                      <td className="p-4 text-on-surface-variant text-sm">{req.priority || 'N/A'}</td>
+                      <td className="text-on-surface-variant p-4 text-sm">
+                        {req.priority || 'N/A'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -153,67 +182,100 @@ export const RequirementsPage = () => {
 
           {/* Details Modal */}
           {selectedReq && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedReq(null)}>
-              <div 
-                className="w-full max-w-3xl max-h-[90vh] bg-surface-container-lowest rounded-2xl flex flex-col shadow-2xl overflow-hidden"
+            <div
+              className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm sm:p-6"
+              onClick={() => setSelectedReq(null)}
+            >
+              <div
+                className="bg-surface-container-lowest flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="p-6 border-b border-outline-variant/30 bg-surface-container-low/30 flex-shrink-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-primary font-bold text-sm bg-primary/10 px-3 py-1.5 rounded-md">{selectedReq.requirementKey}</span>
-                    <button onClick={() => setSelectedReq(null)} className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high p-2 rounded-full transition-colors cursor-pointer">
+                <div className="border-outline-variant/30 bg-surface-container-low/30 flex-shrink-0 border-b p-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-primary bg-primary/10 rounded-md px-3 py-1.5 text-sm font-bold">
+                      {selectedReq.requirementKey}
+                    </span>
+                    <button
+                      onClick={() => setSelectedReq(null)}
+                      className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-full p-2 transition-colors"
+                    >
                       <span className="material-symbols-outlined text-[20px]">close</span>
                     </button>
                   </div>
-                  <h2 className="text-2xl font-bold font-headline-md text-on-surface mb-4 leading-tight">{selectedReq.title}</h2>
+                  <h2 className="font-headline-md text-on-surface mb-4 text-2xl leading-tight font-bold">
+                    {selectedReq.title}
+                  </h2>
                   <div className="flex gap-3">
-                    <span className="px-3 py-1.5 rounded-md border border-outline-variant text-xs font-semibold bg-surface-container text-on-surface-variant">{selectedReq.type || 'N/A'}</span>
-                    <span className="px-3 py-1.5 rounded-md text-xs font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase tracking-wider">{selectedReq.status || 'N/A'}</span>
+                    <span className="border-outline-variant bg-surface-container text-on-surface-variant rounded-md border px-3 py-1.5 text-xs font-semibold">
+                      {selectedReq.type || 'N/A'}
+                    </span>
+                    <span className="bg-secondary/10 text-secondary border-secondary/20 rounded-md border px-3 py-1.5 text-xs font-bold tracking-wider uppercase">
+                      {selectedReq.status || 'N/A'}
+                    </span>
                   </div>
                 </div>
-                <div className="p-6 overflow-y-auto flex-1">
-                  <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Description</h3>
-                  <div className="text-on-surface font-body-md text-sm mb-8 leading-relaxed bg-surface-container-lowest border border-outline-variant/20 p-4 rounded-lg shadow-sm">
+                <div className="flex-1 overflow-y-auto p-6">
+                  <h3 className="text-on-surface-variant mb-3 text-xs font-bold tracking-wider uppercase">
+                    Description
+                  </h3>
+                  <div className="text-on-surface font-body-md bg-surface-container-lowest border-outline-variant/20 mb-8 rounded-lg border p-4 text-sm leading-relaxed shadow-sm">
                     {selectedReq.description ? (
                       parseDescription(selectedReq.description) ? (
                         <RequirementContent content={parseDescription(selectedReq.description)} />
                       ) : (
                         // Fallback: display plain text if JSON parse fails
-                        <p className="text-gray-300 whitespace-pre-wrap">{getPlainTextDescription(selectedReq.description)}</p>
+                        <p className="whitespace-pre-wrap text-gray-300">
+                          {getPlainTextDescription(selectedReq.description)}
+                        </p>
                       )
                     ) : (
-                      <span className="italic text-on-surface-variant opacity-70">No description provided.</span>
-                    )}
-                  </div>
-                  
-                  <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Acceptance Criteria</h3>
-                  <div className="text-on-surface text-sm space-y-2 mb-8 bg-surface-container-lowest border border-outline-variant/20 p-4 rounded-lg shadow-sm">
-                    {isAcLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    ) : selectedReq.acceptanceCriteriaList && selectedReq.acceptanceCriteriaList.length > 0 ? (
-                      <ul className="list-decimal pl-5 space-y-2">
-                        {selectedReq.acceptanceCriteriaList.sort((a, b) => a.orderIndex - b.orderIndex).map(ac => (
-                          <li key={ac.id} className="text-on-surface leading-relaxed">{ac.content}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="italic text-on-surface-variant opacity-70">No acceptance criteria provided.</span>
+                      <span className="text-on-surface-variant italic opacity-70">
+                        No description provided.
+                      </span>
                     )}
                   </div>
 
-                  <div className="flex gap-3 mt-4">
-                    <button 
-                      onClick={() => navigate(`/projects/${projectId}/requirements/${selectedReq.id}/generate`)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-tertiary hover:brightness-110 text-on-primary px-4 py-3 rounded-lg font-bold transition-all shadow-md shadow-primary/20 active:scale-95 cursor-pointer"
+                  <h3 className="text-on-surface-variant mb-3 text-xs font-bold tracking-wider uppercase">
+                    Acceptance Criteria
+                  </h3>
+                  <div className="text-on-surface bg-surface-container-lowest border-outline-variant/20 mb-8 space-y-2 rounded-lg border p-4 text-sm shadow-sm">
+                    {isAcLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="border-primary h-6 w-6 animate-spin rounded-full border-4 border-t-transparent"></div>
+                      </div>
+                    ) : selectedReq.acceptanceCriteriaList &&
+                      selectedReq.acceptanceCriteriaList.length > 0 ? (
+                      <ul className="list-decimal space-y-2 pl-5">
+                        {selectedReq.acceptanceCriteriaList
+                          .sort((a, b) => a.orderIndex - b.orderIndex)
+                          .map((ac) => (
+                            <li key={ac.id} className="text-on-surface leading-relaxed">
+                              {ac.content}
+                            </li>
+                          ))}
+                      </ul>
+                    ) : (
+                      <span className="text-on-surface-variant italic opacity-70">
+                        No acceptance criteria provided.
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={() =>
+                        navigate(`/projects/${projectId}/requirements/${selectedReq.id}/generate`)
+                      }
+                      className="from-primary to-tertiary text-on-primary shadow-primary/20 flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r px-4 py-3 font-bold shadow-md transition-all hover:brightness-110 active:scale-95"
                     >
                       <Wand2 size={18} />
                       Generate Test Cases (AI)
                     </button>
-                    <button 
-                      onClick={() => navigate(`/projects/${projectId}/requirements/${selectedReq.id}/test-cases`)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-surface-variant hover:bg-surface-variant-hover text-on-surface-variant px-4 py-3 rounded-lg font-bold transition-all border border-outline active:scale-95 cursor-pointer"
+                    <button
+                      onClick={() =>
+                        navigate(`/projects/${projectId}/requirements/${selectedReq.id}/test-cases`)
+                      }
+                      className="bg-surface-variant hover:bg-surface-variant-hover text-on-surface-variant border-outline flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-3 font-bold transition-all active:scale-95"
                     >
                       <ListChecks size={18} />
                       View Test Cases
