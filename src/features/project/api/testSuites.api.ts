@@ -14,31 +14,31 @@ export interface TestSuite {
 
 export const testSuiteApi = {
   getTestSuitesByProject: async (projectId: string): Promise<TestSuite[]> => {
-    const response = await httpClient.get(`/core-management-service/api/v1/test-suites/by-project/${projectId}`);
+    const response = await httpClient.get(`/core-managerment-service/api/v1/test-suites/by-project/${projectId}`);
     return response.data;
   },
   
   createTestSuite: async (data: { suiteName: string; description: string; projectId: string; testCaseIds: number[] }): Promise<TestSuite> => {
-    const response = await httpClient.post('/core-management-service/api/v1/test-suites', data);
+    const response = await httpClient.post('/core-managerment-service/api/v1/test-suites', data);
     return response.data;
   },
 
   updateTestSuite: async (id: number, data: { suiteName: string; description: string; status: string }): Promise<TestSuite> => {
-    const response = await httpClient.put(`/core-management-service/api/v1/test-suites/${id}`, data);
+    const response = await httpClient.put(`/core-managerment-service/api/v1/test-suites/${id}`, data);
     return response.data;
   },
 
   deleteTestSuite: async (id: number): Promise<void> => {
-    await httpClient.delete(`/core-management-service/api/v1/test-suites/${id}`);
+    await httpClient.delete(`/core-managerment-service/api/v1/test-suites/${id}`);
   },
 
   addTestCasesToSuite: async (suiteId: number, testCaseIds: number[]): Promise<any> => {
-    const response = await httpClient.post(`/core-management-service/api/v1/test-suites/${suiteId}/add-test-cases`, testCaseIds);
+    const response = await httpClient.post(`/core-managerment-service/api/v1/test-suites/${suiteId}/add-test-cases`, testCaseIds);
     return response.data;
   },
 
   linkFlow: async (suiteId: number): Promise<TestSuite> => {
-    const response = await httpClient.post(`/core-management-service/api/v1/test-suites/${suiteId}/link-flow`);
+    const response = await httpClient.post(`/core-managerment-service/api/v1/test-suites/${suiteId}/link-flow`);
     return response.data;
   },
 
@@ -48,17 +48,17 @@ export const testSuiteApi = {
   },
 
   getTestSuiteItems: async (suiteId: number): Promise<any[]> => {
-    const response = await httpClient.get(`/core-management-service/api/v1/test-suites/${suiteId}/items`);
+    const response = await httpClient.get(`/core-managerment-service/api/v1/test-suites/${suiteId}/items`);
     return response.data;
   },
 
    getExecutionLogs: async (runId: number): Promise<{logs: string}> => {
-     const response = await httpClient.get(`/core-management-service/api/v1/test-pipeline/logs/${runId}`);
+     const response = await httpClient.get(`/core-managerment-service/api/v1/test-pipeline/logs/${runId}`);
      return response.data;
    },
    
    getExecutionResults: async (runId: number): Promise<any> => {
-     const response = await httpClient.get(`/core-management-service/api/v1/test-pipeline/results/${runId}`);
+     const response = await httpClient.get(`/core-managerment-service/api/v1/test-pipeline/results/${runId}`);
      return response.data;
    }
 };

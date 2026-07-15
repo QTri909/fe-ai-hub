@@ -58,7 +58,7 @@ export const TestGenerationWizard = () => {
     setIsGenerating(true);
     setExplorationStatus('');
     try {
-      const response = await httpClient.post(`/core-management-service/api/v1/requirements/${reqId}/generate-test-cases`, {
+      const response = await httpClient.post(`/core-managerment-service/api/v1/requirements/${reqId}/generate-test-cases`, {
         scriptLanguage: 'JAVASCRIPT',
         framework: 'playwright',
         maxTestCases: 5,

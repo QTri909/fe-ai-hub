@@ -10,6 +10,7 @@ export const RequirementsPage = () => {
   const [selectedReq, setSelectedReq] = useState<Requirement | null>(null);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAcLoading, setIsAcLoading] = useState(false);
 
   useEffect(() => {
     const fetchRequirements = async () => {
@@ -26,6 +27,26 @@ export const RequirementsPage = () => {
     };
     fetchRequirements();
   }, [projectId]);
+
+  // Fetch acceptance criteria when a requirement is selected
+  useEffect(() => {
+    const fetchAcceptanceCriteria = async () => {
+      if (!selectedReq) return;
+      try {
+        setIsAcLoading(true);
+        const acList = await requirementApi.getAcceptanceCriteriaByRequirement(selectedReq.id);
+        // Map backend shape to UI shape
+        const mapped = acList.map(ac => ({ id: String(ac.acId), content: ac.content, orderIndex: ac.orderIndex }));
+        setSelectedReq(prev => prev ? { ...prev, acceptanceCriteriaList: mapped } : prev);
+      } catch (error) {
+        console.error('Failed to fetch acceptance criteria', error);
+      } finally {
+        setIsAcLoading(false);
+      }
+    };
+
+    fetchAcceptanceCriteria();
+  }, [selectedReq?.id]);
 
   // Parse JSON description from Jira
   const parseDescription = (description: string | undefined) => {
@@ -167,7 +188,11 @@ export const RequirementsPage = () => {
                   
                   <h3 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Acceptance Criteria</h3>
                   <div className="text-on-surface text-sm space-y-2 mb-8 bg-surface-container-lowest border border-outline-variant/20 p-4 rounded-lg shadow-sm">
-                    {selectedReq.acceptanceCriteriaList && selectedReq.acceptanceCriteriaList.length > 0 ? (
+                    {isAcLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : selectedReq.acceptanceCriteriaList && selectedReq.acceptanceCriteriaList.length > 0 ? (
                       <ul className="list-decimal pl-5 space-y-2">
                         {selectedReq.acceptanceCriteriaList.sort((a, b) => a.orderIndex - b.orderIndex).map(ac => (
                           <li key={ac.id} className="text-on-surface leading-relaxed">{ac.content}</li>
