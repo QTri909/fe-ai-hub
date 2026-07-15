@@ -19,16 +19,16 @@ export interface SyncStatus {
 
 export const notificationApi = {
   getNotifications: async (): Promise<Notification[]> => {
-    const response = await httpClient.get<Notification[]>('/core-management-service/api/v1/notifications');
+    const response = await httpClient.get<Notification[]>('/core-managerment-service/api/v1/notifications');
     return response.data;
   },
 
   markAsRead: async (id: string): Promise<void> => {
-    await httpClient.patch(`/core-management-service/api/v1/notifications/${id}/read`);
+    await httpClient.patch(`/core-managerment-service/api/v1/notifications/${id}/read`);
   },
 
   markAllAsRead: async (): Promise<void> => {
-    await httpClient.patch('/core-management-service/api/v1/notifications/read-all');
+    await httpClient.patch('/core-managerment-service/api/v1/notifications/read-all');
   },
 
   getSyncStatus: async (): Promise<SyncStatus> => {
