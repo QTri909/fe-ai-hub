@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Play, Trash, Code } from 'lucide-react';
+import { Search, Filter, Play, Trash, Code, Edit3, Save, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testCaseApi, type TestCase } from '@/features/project/api/testCases.api';
 import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
@@ -18,6 +18,13 @@ export const TestCaseRepository = () => {
   const [scripts, setScripts] = useState<any[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [editingTab, setEditingTab] = useState<'steps' | 'data' | 'script' | null>(null);
+  const [editingStepId, setEditingStepId] = useState<number | null>(null);
+  const [editingDataId, setEditingDataId] = useState<number | null>(null);
+  const [editingScriptId, setEditingScriptId] = useState<number | null>(null);
+  const [stepEditForm, setStepEditForm] = useState({ stepOrder: 1, actionDescription: '', expectedResult: '' });
+  const [dataEditForm, setDataEditForm] = useState({ dataName: '', inputData: '', expectedData: '' });
+  const [scriptEditForm, setScriptEditForm] = useState({ scriptName: '', scriptContent: '' });
 
   // Checkbox selection
   const [selectedTestCaseIds, setSelectedTestCaseIds] = useState<number[]>([]);
@@ -49,6 +56,30 @@ export const TestCaseRepository = () => {
     fetchTestCases();
   }, [reqId]);
 
+  const refreshDetails = async () => {
+    if (!selectedTc) {
+      setSteps([]);
+      setTestData([]);
+      setScripts([]);
+      return;
+    }
+    try {
+      setIsLoadingDetails(true);
+      const [stepsData, testDataVal, scriptsData] = await Promise.all([
+        testCaseApi.getTestCaseSteps(selectedTc.testCaseId),
+        testCaseApi.getTestCaseTestData(selectedTc.testCaseId),
+        testCaseApi.getTestCaseScripts(selectedTc.testCaseId)
+      ]);
+      setSteps(stepsData);
+      setTestData(testDataVal);
+      setScripts(scriptsData);
+    } catch (error) {
+      console.error("Failed to fetch test case details:", error);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
   React.useEffect(() => {
     if (!selectedTc) {
       setSteps([]);
@@ -56,25 +87,15 @@ export const TestCaseRepository = () => {
       setScripts([]);
       return;
     }
-    const fetchDetails = async () => {
-      try {
-        setIsLoadingDetails(true);
-        const [stepsData, testDataVal, scriptsData] = await Promise.all([
-          testCaseApi.getTestCaseSteps(selectedTc.testCaseId),
-          testCaseApi.getTestCaseTestData(selectedTc.testCaseId),
-          testCaseApi.getTestCaseScripts(selectedTc.testCaseId)
-        ]);
-        setSteps(stepsData);
-        setTestData(testDataVal);
-        setScripts(scriptsData);
-      } catch (error) {
-        console.error("Failed to fetch test case details:", error);
-      } finally {
-        setIsLoadingDetails(false);
-      }
-    };
-    fetchDetails();
+    refreshDetails();
   }, [selectedTc]);
+
+  const resetEditStates = () => {
+    setEditingTab(null);
+    setEditingStepId(null);
+    setEditingDataId(null);
+    setEditingScriptId(null);
+  };
 
   const handleToggleSelect = (tcId: number) => {
     setSelectedTestCaseIds(prev =>
@@ -135,7 +156,89 @@ const handleDeleteTestCase = async (tcId: number) => {
     }
   };
 
-const handleGenerateScript = async () => {
+  const startStepEdit = (step: any) => {
+    setEditingTab('steps');
+    setEditingStepId(step.testStepId ?? null);
+    setStepEditForm({
+      stepOrder: Number(step.stepOrder ?? 1),
+      actionDescription: step.actionDescription ?? step.action ?? '',
+      expectedResult: step.expectedResult ?? ''
+    });
+  };
+
+  const saveStepEdit = async (step: any) => {
+    if (!selectedTc || editingStepId === null) return;
+    try {
+      await testCaseApi.updateTestStep(selectedTc.testCaseId, editingStepId, {
+        stepOrder: Number(stepEditForm.stepOrder),
+        actionDescription: stepEditForm.actionDescription,
+        expectedResult: stepEditForm.expectedResult
+      });
+      await refreshDetails();
+      resetEditStates();
+    } catch (error) {
+      console.error('Failed to update test step:', error);
+      alert('Failed to update test step.');
+    }
+  };
+
+  const startDataEdit = (item: any) => {
+    setEditingTab('data');
+    setEditingDataId(item.testDataId ?? null);
+    setDataEditForm({
+      dataName: item.dataName ?? '',
+      inputData: typeof item.inputData === 'string' ? item.inputData : JSON.stringify(item.inputData ?? '', null, 2),
+      expectedData: typeof item.expectedData === 'string' ? item.expectedData : JSON.stringify(item.expectedData ?? '', null, 2)
+    });
+  };
+
+  const saveDataEdit = async () => {
+    if (!selectedTc || editingDataId === null) return;
+    try {
+      const parseJsonValue = (value: string) => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      };
+      await testCaseApi.updateTestData(selectedTc.testCaseId, editingDataId, {
+        dataName: dataEditForm.dataName,
+        inputData: parseJsonValue(dataEditForm.inputData),
+        expectedData: parseJsonValue(dataEditForm.expectedData)
+      });
+      await refreshDetails();
+      resetEditStates();
+    } catch (error) {
+      console.error('Failed to update test data:', error);
+      alert('Failed to update test data.');
+    }
+  };
+
+  const startScriptEdit = (item: any) => {
+    setEditingTab('script');
+    setEditingScriptId(item.scriptId ?? null);
+    setScriptEditForm({
+      scriptName: item.scriptName ?? '',
+      scriptContent: item.scriptContent ?? ''
+    });
+  };
+
+  const saveScriptEdit = async () => {
+    if (!selectedTc || editingScriptId === null) return;
+    try {
+      await testCaseApi.updateScript(selectedTc.testCaseId, editingScriptId, {
+        scriptContent: scriptEditForm.scriptContent
+      });
+      await refreshDetails();
+      resetEditStates();
+    } catch (error) {
+      console.error('Failed to update test script:', error);
+      alert('Failed to update test script.');
+    }
+  };
+
+  const handleGenerateScript = async () => {
     if (!selectedTc) return;
     const baseUrl = window.prompt("Enter base URL:", "https://example.com") || "";
     if (!baseUrl) return;
@@ -345,20 +448,23 @@ const handleGenerateScript = async () => {
                 
 {/* Tabs + Generate/Run Script Button */}
                 <div className="flex justify-between items-center border-b border-gray-800">
-                  <div className="flex gap-6">
-                    {['steps', 'data', 'script'].map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab as any)}
-                        className={`pb-3 text-sm font-medium capitalize transition-colors border-b-2 ${
-                          activeTab === tab 
-                            ? 'border-indigo-500 text-indigo-400' 
-                            : 'border-transparent text-gray-500 hover:text-gray-300'
-                        }`}
-                      >
-                        Test {tab}
-                      </button>
-                    ))}
+                  <div className="flex gap-4">
+                    {['steps', 'data', 'script'].map(tab => {
+                      const label = tab === 'steps' ? 'Test steps' : tab === 'data' ? 'Test data' : 'Test script';
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveTab(tab as any)}
+                          className={`pb-3 text-sm font-medium capitalize transition-colors border-b-2 ${
+                            activeTab === tab 
+                              ? 'border-indigo-500 text-indigo-400' 
+                              : 'border-transparent text-gray-500 hover:text-gray-300'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
                   </div>
                   
                   <div className="flex gap-2">
@@ -404,13 +510,65 @@ const handleGenerateScript = async () => {
                                 </tr>
                               </thead>
                               <tbody>
-                                {steps.map((step: any, idx: number) => (
-                                  <tr key={step.testStepId || idx} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/50 bg-gray-950">
-                                    <td className="px-4 py-3 text-center text-gray-500">{step.stepOrder || idx + 1}</td>
-                                    <td className="px-4 py-3 whitespace-pre-wrap">{step.actionDescription}</td>
-                                    <td className="px-4 py-3 whitespace-pre-wrap">{step.expectedResult}</td>
-                                  </tr>
-                                ))}
+                                {steps.map((step: any, idx: number) => {
+                                  const isEditing = editingStepId === (step.testStepId ?? null) && editingTab === 'steps';
+                                  return (
+                                    <tr key={step.testStepId || idx} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/50 bg-gray-950">
+                                       <td className="px-4 py-3 text-center text-gray-500">
+                                         {isEditing ? (
+                                             <input
+                                               value={stepEditForm.stepOrder}
+                                               onChange={(e) => setStepEditForm({ ...stepEditForm, stepOrder: Number(e.target.value) })}
+                                               className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm text-center"
+                                               type="number"
+                                               min="1"
+                                             />
+                                         ) : (
+                                           step.stepOrder || idx + 1
+                                         )}
+                                       </td>
+                                       <td className="px-4 py-3">
+                                         {isEditing ? (
+                                           <div className="space-y-2">
+                                             <textarea
+                                               value={stepEditForm.actionDescription}
+                                               onChange={(e) => setStepEditForm({ ...stepEditForm, actionDescription: e.target.value })}
+                                               className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"
+                                               rows={3}
+                                             />
+                                             <div className="flex gap-2">
+                                               <button onClick={() => saveStepEdit(step)} className="flex items-center gap-1 bg-emerald-600 px-2 py-1 rounded text-xs">
+                                                 <Save size={12} /> Save
+                                               </button>
+                                               <button onClick={() => resetEditStates()} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-xs">
+                                                 <X size={12} /> Cancel
+                                               </button>
+                                             </div>
+                                           </div>
+                                         ) : (
+                                           <div className="flex items-start justify-between gap-2">
+                                             <div className="whitespace-pre-wrap">{step.actionDescription ?? step.action ?? ''}</div>
+                                             <button onClick={() => startStepEdit(step)} className="text-indigo-400 hover:text-indigo-300 p-1" aria-label="Edit steps">
+                                               <Edit3 size={14} />
+                                             </button>
+                                           </div>
+                                         )}
+                                       </td>
+                                      <td className="px-4 py-3 whitespace-pre-wrap">
+                                        {isEditing ? (
+                                          <textarea
+                                            value={stepEditForm.expectedResult}
+                                            onChange={(e) => setStepEditForm({ ...stepEditForm, expectedResult: e.target.value })}
+                                            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"
+                                            rows={3}
+                                          />
+                                        ) : (
+                                          step.expectedResult ?? ''
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
@@ -422,19 +580,59 @@ const handleGenerateScript = async () => {
                     {activeTab === 'data' && (
                       <div className="bg-gray-950 p-4 rounded-lg border border-gray-800">
                         {testData.length > 0 ? (
-                          testData.map((data: any) => (
-                            <div key={data.testDataId} className="mb-4">
-                              {data.dataName && <div className="text-gray-400 font-semibold mb-1 text-xs">{data.dataName}</div>}
-                              <pre className="text-sm text-emerald-400 font-mono overflow-auto max-h-48">
-                                {data.inputData}
-                              </pre>
-                              {data.expectedData && (
-                                <pre className="text-sm text-blue-400 font-mono overflow-auto max-h-48 mt-2 border-t border-gray-800 pt-2">
-                                  {data.expectedData}
-                                </pre>
-                              )}
-                            </div>
-                          ))
+                          testData.map((data: any) => {
+                            const isEditing = editingDataId === (data.testDataId ?? null) && editingTab === 'data';
+                            return (
+                              <div key={data.testDataId} className="mb-4 border border-gray-800 rounded-lg p-3">
+                                {isEditing ? (
+                                  <div className="space-y-2">
+                                    <input
+                                      value={dataEditForm.dataName}
+                                      onChange={(e) => setDataEditForm({ ...dataEditForm, dataName: e.target.value })}
+                                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"
+                                    />
+                                    <textarea
+                                      value={dataEditForm.inputData}
+                                      onChange={(e) => setDataEditForm({ ...dataEditForm, inputData: e.target.value })}
+                                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm font-mono"
+                                      rows={6}
+                                    />
+                                    <textarea
+                                      value={dataEditForm.expectedData}
+                                      onChange={(e) => setDataEditForm({ ...dataEditForm, expectedData: e.target.value })}
+                                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm font-mono"
+                                      rows={6}
+                                    />
+                                    <div className="flex gap-2">
+                                      <button onClick={saveDataEdit} className="flex items-center gap-1 bg-emerald-600 px-2 py-1 rounded text-xs">
+                                        <Save size={12} /> Save
+                                      </button>
+                                      <button onClick={() => resetEditStates()} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-xs">
+                                        <X size={12} /> Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      {data.dataName && <div className="text-gray-400 font-semibold mb-1 text-xs">{data.dataName}</div>}
+                                      <button onClick={() => startDataEdit(data)} className="text-indigo-400 hover:text-indigo-300 p-1" aria-label="Edit data">
+                                        <Edit3 size={14} />
+                                      </button>
+                                    </div>
+                                    <pre className="text-sm text-emerald-400 font-mono overflow-auto max-h-48">
+                                      {data.inputData}
+                                    </pre>
+                                    {data.expectedData && (
+                                      <pre className="text-sm text-blue-400 font-mono overflow-auto max-h-48 mt-2 border-t border-gray-800 pt-2">
+                                        {data.expectedData}
+                                      </pre>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <div className="text-gray-500 text-sm">No test data generated for this test case.</div>
                         )}
@@ -443,16 +641,50 @@ const handleGenerateScript = async () => {
                     {activeTab === 'script' && (
                       <div className="bg-gray-950 p-4 rounded-lg border border-gray-800 h-full">
                         {scripts.length > 0 ? (
-                          scripts.map((script: any) => (
-                            <div key={script.scriptId} className="mb-4 h-full">
-                              <div className="text-gray-500 text-xs mb-1">
-                                {script.scriptName} ({script.scriptLanguage || script.framework})
+                          scripts.map((script: any) => {
+                            const isEditing = editingScriptId === (script.scriptId ?? null) && editingTab === 'script';
+                            return (
+                              <div key={script.scriptId} className="mb-4 border border-gray-800 rounded-lg p-3">
+                                {isEditing ? (
+                                  <div className="space-y-2">
+                                    <input
+                                      value={scriptEditForm.scriptName}
+                                      onChange={(e) => setScriptEditForm({ ...scriptEditForm, scriptName: e.target.value })}
+                                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"
+                                    />
+                                    <textarea
+                                      value={scriptEditForm.scriptContent}
+                                      onChange={(e) => setScriptEditForm({ ...scriptEditForm, scriptContent: e.target.value })}
+                                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm font-mono"
+                                      rows={14}
+                                    />
+                                    <div className="flex gap-2">
+                                      <button onClick={saveScriptEdit} className="flex items-center gap-1 bg-emerald-600 px-2 py-1 rounded text-xs">
+                                        <Save size={12} /> Save
+                                      </button>
+                                      <button onClick={() => resetEditStates()} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-xs">
+                                        <X size={12} /> Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-gray-500 text-xs mb-1">
+                                        {script.scriptName} ({script.scriptLanguage || script.framework})
+                                      </div>
+                                      <button onClick={() => startScriptEdit(script)} className="text-indigo-400 hover:text-indigo-300 p-1" aria-label="Edit script">
+                                        <Edit3 size={14} />
+                                      </button>
+                                    </div>
+                                    <pre className="text-sm text-gray-300 font-mono overflow-auto max-h-96">
+                                      {script.scriptContent}
+                                    </pre>
+                                  </div>
+                                )}
                               </div>
-                              <pre className="text-sm text-gray-300 font-mono overflow-auto max-h-96">
-                                {script.scriptContent}
-                              </pre>
-                            </div>
-                          ))
+                            );
+                          })
                         ) : (
                           <div className="text-gray-500 text-sm">No script generated for this test case.</div>
                         )}

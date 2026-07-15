@@ -52,6 +52,21 @@ export const testCaseApi = {
     return response.data;
   },
 
+  updateTestStep: async (testCaseId: number, stepId: number, data: { stepOrder?: number; actionDescription?: string; expectedResult?: string }): Promise<any> => {
+    const response = await httpClient.put(`/core-managerment-service/api/test-cases/${testCaseId}/steps/${stepId}`, data);
+    return response.data;
+  },
+
+  updateTestData: async (testCaseId: number, testDataId: number, data: { dataName?: string; inputData?: any; expectedData?: any }): Promise<any> => {
+    const response = await httpClient.put(`/core-managerment-service/api/test-cases/${testCaseId}/test-data/${testDataId}`, data);
+    return response.data;
+  },
+
+  updateScript: async (testCaseId: number, scriptId: number, data: { scriptContent?: string }): Promise<any> => {
+    const response = await httpClient.put(`/core-managerment-service/api/test-cases/${testCaseId}/scripts/${scriptId}`, data);
+    return response.data;
+  },
+
   deleteTestCase: async (id: number): Promise<void> => {
     await httpClient.delete(`/core-managerment-service/api/test-cases/${id}`);
   },
