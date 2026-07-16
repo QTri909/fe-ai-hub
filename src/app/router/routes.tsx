@@ -59,13 +59,20 @@ export const routes: RouteObject[] = [
             },
           },
           {
+            path: ROUTES.PROFILE,
+            lazy: async () => {
+              const { ProfilePage } = await import('@/pages/profile/ProfilePage');
+              return { Component: ProfilePage };
+            },
+          },
+          {
             path: ROUTES.PROJECTS,
             lazy: async () => {
               const { ProjectsPage } = await import('@/pages/projects');
               return { Component: ProjectsPage };
             },
           },
-        ]
+        ],
       },
       {
         path: '/projects/:projectId',
@@ -77,7 +84,8 @@ export const routes: RouteObject[] = [
           {
             index: true,
             lazy: async () => {
-              const { ProjectDashboardPage } = await import('@/pages/projects/ProjectDashboardPage');
+              const { ProjectDashboardPage } =
+                await import('@/pages/projects/ProjectDashboardPage');
               return { Component: ProjectDashboardPage };
             },
           },
@@ -91,7 +99,8 @@ export const routes: RouteObject[] = [
           {
             path: 'requirements/:id/generate',
             lazy: async () => {
-              const { TestGenerationWizard } = await import('@/pages/test-gen/TestGenerationWizard');
+              const { TestGenerationWizard } =
+                await import('@/pages/test-gen/TestGenerationWizard');
               return { Component: TestGenerationWizard };
             },
           },
@@ -112,7 +121,8 @@ export const routes: RouteObject[] = [
           {
             path: 'test-suites',
             lazy: async () => {
-              const { TestSuiteManagementPage } = await import('@/pages/test-suites/TestSuiteManagementPage');
+              const { TestSuiteManagementPage } =
+                await import('@/pages/test-suites/TestSuiteManagementPage');
               return { Component: TestSuiteManagementPage };
             },
           },
@@ -137,7 +147,7 @@ export const routes: RouteObject[] = [
               return { Component: TestRunDetailsPage };
             },
           },
-        ]
+        ],
       },
       {
         path: ROUTES.WORKSPACE_LIST,
@@ -160,7 +170,7 @@ export const routes: RouteObject[] = [
               return { Component: WorkspacePage };
             },
           },
-        ]
+        ],
       },
     ],
   },

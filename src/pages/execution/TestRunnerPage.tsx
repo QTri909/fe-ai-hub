@@ -44,7 +44,7 @@ export const TestRunnerPage = () => {
     
     const poll = async () => {
       try {
-        const res = await httpClient.get(`/core-management-service/api/v1/test-pipeline/results/${runId}`);
+        const res = await httpClient.get(`/core-managerment-service/api/v1/test-pipeline/results/${runId}`);
         const data = res.data;
         
         if (data.is_completed) {

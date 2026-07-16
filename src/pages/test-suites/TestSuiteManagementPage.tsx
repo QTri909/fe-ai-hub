@@ -120,8 +120,8 @@ export const TestSuiteManagementPage = () => {
     setIsLoadingTcDetails(true);
     try {
       const [stepsRes, dataRes] = await Promise.all([
-        httpClient.get(`/core-management-service/api/test-cases/${testCase.testCaseId}/steps`).then(r => r.data),
-        httpClient.get(`/core-management-service/api/test-cases/${testCase.testCaseId}/test-data`).then(r => r.data)
+        httpClient.get(`/core-managerment-service/api/test-cases/${testCase.testCaseId}/steps`).then(r => r.data),
+        httpClient.get(`/core-managerment-service/api/test-cases/${testCase.testCaseId}/test-data`).then(r => r.data)
       ]);
       setTcDetails({ steps: Array.isArray(stepsRes) ? stepsRes : [], data: Array.isArray(dataRes) ? dataRes : [] });
     } catch (e) {
