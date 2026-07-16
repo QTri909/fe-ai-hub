@@ -7,6 +7,7 @@ import {
   mockAcceptanceCriteria,
   getMockRequirementDetail,
 } from './data/requirement';
+import { mockGenerationHistories, mockTestRuns, mockRecentActivities } from './data/history';
 import type { RequirementPage } from '@/features/requirements/types/requirements.types';
 import type { Project } from '@/features/project/types/project.types';
 
@@ -37,6 +38,18 @@ export const handlers = [
   http.get(baseUrl('/auth-service/api/v1/users/me'), async () => {
     await delay(100);
     return HttpResponse.json(mockProfile);
+  }),
+
+  http.put(baseUrl('/auth-service/api/v1/users/me'), async ({ request }) => {
+    await delay(200);
+    const body = (await request.json()) as any;
+    if (body.fullName !== undefined && body.fullName !== null && body.fullName.trim() !== '') {
+      mockProfile.fullName = body.fullName;
+    }
+    if (body.avatarUrl !== undefined && body.avatarUrl !== null && body.avatarUrl.trim() !== '') {
+      mockProfile.avatarUrl = body.avatarUrl;
+    }
+    return HttpResponse.json({ ...mockProfile });
   }),
 
   // ─── WORKSPACES ─────────────────────────────────────────
@@ -135,6 +148,10 @@ export const handlers = [
       totalElements: total,
       totalPages: Math.ceil(total / size),
       pageable: { pageNumber: page, pageSize: size },
+      page,
+      size,
+      first: page === 0,
+      last: (page + 1) * size >= total,
     });
   }),
 
@@ -153,6 +170,10 @@ export const handlers = [
         totalElements: total,
         totalPages: Math.ceil(total / size),
         pageable: { pageNumber: page, pageSize: size },
+        page,
+        size,
+        first: page === 0,
+        last: (page + 1) * size >= total,
       });
     }
   ),
@@ -288,4 +309,39 @@ export const handlers = [
     await delay(300);
     return HttpResponse.json({ status: 'syncing', message: 'Sync initiated' });
   }),
+
+  // ─── HISTORY ──────────────────────────────────────────────
+
+  /** GET /api/v1/history/requirements/{requirementId}/generations */
+  http.get(
+    baseUrl('/core-managerment-service/api/v1/history/requirements/:requirementId/generations'),
+    async ({ params }) => {
+      await delay(200);
+      const history = mockGenerationHistories[params.requirementId as string];
+      if (!history) return new HttpResponse(null, { status: 404 });
+      return HttpResponse.json(history);
+    }
+  ),
+
+  /** GET /api/v1/history/projects/{projectId}/executions */
+  http.get(
+    baseUrl('/core-managerment-service/api/v1/history/projects/:projectId/executions'),
+    async ({ params }) => {
+      await delay(200);
+      const runs = mockTestRuns.filter((r) => r.projectId === params.projectId);
+      return HttpResponse.json(runs);
+    }
+  ),
+
+  /** GET /api/v1/history/projects/{projectId}/recent-activity?limit=10 */
+  http.get(
+    baseUrl('/core-managerment-service/api/v1/history/projects/:projectId/recent-activity'),
+    async ({ params, request }) => {
+      await delay(200);
+      const url = new URL(request.url);
+      const limit = parseInt(url.searchParams.get('limit') || '10');
+      const activities = mockRecentActivities.filter((a) => a.projectId === params.projectId);
+      return HttpResponse.json(activities.slice(0, limit));
+    }
+  ),
 ];
