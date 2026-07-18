@@ -85,7 +85,7 @@ export const TestSuiteManagementPage = () => {
     if (!baseUrl) return;
     
     try {
-      await testSuiteApi.executeTestSuites([suiteId], baseUrl);
+      await testSuiteApi.executeTestSuite(suiteId, baseUrl);
       alert("Test execution started! Check the Test Runs page for results.");
     } catch (error) {
       console.error('Failed to run tests', error);

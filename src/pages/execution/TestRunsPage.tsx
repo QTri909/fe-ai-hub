@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, XCircle, Clock, ChevronRight, Loader2 } from 'lucide-react';
+import { Play, CheckCircle2, XCircle, Clock, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { testRunApi } from '@/features/project/api/testRuns.api';
 import type { TestRun } from '@/features/project/api/testRuns.api';
 
@@ -9,13 +9,20 @@ export function TestRunsPage() {
     const navigate = useNavigate();
     const [runs, setRuns] = useState<TestRun[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (projectId) {
-            testRunApi.getRunsByProject(projectId).then(res => {
-                setRuns(res);
-                setLoading(false);
-            });
+            testRunApi.getRunsByProject(projectId)
+                .then(res => {
+                    setRuns(res);
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch test runs:', err);
+                    setError(err.response?.data?.message || err.message || 'Failed to load test runs');
+                    setLoading(false);
+                });
         }
     }, [projectId]);
 
@@ -27,6 +34,22 @@ export function TestRunsPage() {
     };
 
     if (loading) return <div className="p-8 text-center text-gray-500"><Loader2 className="animate-spin inline-block mr-2"/> Loading Test Runs...</div>;
+
+    if (error) return (
+        <div className="p-8 max-w-[1400px] mx-auto text-slate-900 min-h-screen bg-slate-50">
+            <div className="flex items-center gap-2 text-red-600 mb-4">
+                <AlertCircle size={20} />
+                <span className="font-medium">Error loading test runs</span>
+            </div>
+            <p className="text-gray-500">{error}</p>
+            <button 
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+                Retry
+            </button>
+        </div>
+    );
 
     return (
         <div className="p-8 max-w-[1400px] mx-auto text-slate-900 min-h-screen bg-slate-50">
@@ -65,7 +88,7 @@ export function TestRunsPage() {
                         {runs.map(run => (
                             <tr key={run.runId} className="hover:bg-slate-50/50 transition group cursor-pointer border-b border-slate-100 last:border-b-0" onClick={() => navigate(`/projects/${projectId}/test-runs/${run.runId}`)}>
                                 <td className="py-4 px-6 font-bold text-blue-600">RUN-{run.runId.toString().padStart(3, '0')}</td>
-                                <td className="py-4 px-6 font-medium text-slate-600">{run.testSuite.suiteName}</td>
+                                <td className="py-4 px-6 font-medium text-slate-600">{run.testSuite?.suiteName ?? 'N/A'}</td>
                                 <td className="py-4 px-6">
                                     <span className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 font-semibold px-2.5 py-1 rounded-lg text-xs w-max">
                                         <span className="w-3 h-3 rounded-sm border border-blue-600 flex items-center justify-center">
