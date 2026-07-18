@@ -173,13 +173,6 @@ export const ProjectDashboardPage = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={handleProjectSettings}
-            className="border-outline-variant hover:bg-surface-container-high text-on-surface flex cursor-pointer items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold shadow-sm transition-colors"
-          >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
-            Settings
-          </button>
-          <button
             onClick={handleSync}
             disabled={isSyncing}
             className="bg-primary text-on-primary shadow-primary/20 flex cursor-pointer items-center gap-2 rounded-lg px-5 py-2.5 font-bold shadow-md transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"

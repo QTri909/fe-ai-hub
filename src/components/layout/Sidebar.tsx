@@ -31,10 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     navigate(ROUTES.WORKSPACE_LIST);
   };
 
-  const handleSettings = () => {
-    navigate(ROUTES.PROFILE);
-  };
-
   return (
     <aside
       className={`bg-surface-container-lowest border-outline-variant/30 fixed top-0 left-0 z-50 flex h-full w-64 flex-col border-r px-4 py-4 ${className}`}
@@ -96,14 +92,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </Link>
           );
         })}
-
-        <button
-          onClick={handleSettings}
-          className="text-on-surface-variant hover:bg-surface-container-high mt-auto flex w-full items-center gap-3 px-4 py-2 font-medium transition-colors duration-200"
-        >
-          <span className="material-symbols-outlined text-sm">settings</span>
-          <span className="font-label-md text-xs">Settings</span>
-        </button>
 
         <button
           onClick={onLogout}
