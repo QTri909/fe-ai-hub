@@ -295,13 +295,17 @@ const handleDeleteTestCase = async (tcId: number) => {
       setIsGeneratingScript(true);
       const response = await testCaseApi.executeScript(selectedTc.testCaseId, baseUrl);
       
+      // Luôn luôn refresh dữ liệu để cập nhật script/URL mới từ DB trước khi bung thông báo chặn UI
+      await refreshDetails();
+
       if (response.passed) {
         alert("Test passed successfully! Duration: " + response.executionTime + "ms");
       } else {
-        alert("Test failed after " + response.attempts + " attempts. Error: " + (response.errorMessage || "Unknown"));
+        let msg = "Test failed after " + response.attempts + " attempts. Error: " + (response.errorMessage || "Unknown");
         if (response.scriptUpdated) {
-          alert("Script has been auto-fixed! Please check the updated script.");
+          msg += "\n\nScript has been auto-updated (Check the latest script code!).";
         }
+        alert(msg);
       }
     } catch (error: any) {
       console.error("Failed to run script:", error);
