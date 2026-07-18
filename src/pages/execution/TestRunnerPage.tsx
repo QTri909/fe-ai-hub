@@ -100,19 +100,44 @@ const res = await testSuiteApi.executeTestSuite(suiteId, baseUrl || undefined);
         setIsRunning(false);
         setStatus(res.status || 'Completed');
         
+        // Extract summary stats from backend response
+        // Backend returns { passed, failed, total, passRate, results: [...] }
+        const responseData = res;
+        const summaryPassed = responseData.passed || 0;
+        const summaryFailed = responseData.failed || 0;
+        const summaryTotal = responseData.total || 0;
+        const summaryPassRate = responseData.passRate || 0;
+        const testResults = responseData.results || [];
+        
         if (res.playwrightResultsRaw) {
           try {
             const pwData = JSON.parse(res.playwrightResultsRaw);
             setStructuredResults({
               playwright: pwData,
-              expected: res.results
+              passed: summaryPassed,
+              failed: summaryFailed,
+              total: summaryTotal,
+              passRate: summaryPassRate,
+              expected: testResults
             });
           } catch (e) {
             console.error("Failed to parse JSON result", e);
-            setStructuredResults({ expected: res.results });
+            setStructuredResults({ 
+              passed: summaryPassed,
+              failed: summaryFailed,
+              total: summaryTotal,
+              passRate: summaryPassRate,
+              expected: testResults 
+            });
           }
         } else {
-          setStructuredResults({ expected: res.results });
+          setStructuredResults({ 
+            passed: summaryPassed,
+            failed: summaryFailed,
+            total: summaryTotal,
+            passRate: summaryPassRate,
+            expected: testResults 
+          });
         }
         
       } catch (error) {
