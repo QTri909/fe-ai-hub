@@ -143,11 +143,11 @@ export const RequirementsPage = () => {
                 </thead>
                 <tbody>
                   {requirements.map((req) => (
-                    <tr
-                      key={req.id}
-                      onClick={() => navigate(`/projects/${projectId}/test-cases`)}
-                      className="border-outline-variant/10 hover:bg-surface-container-high/50 cursor-pointer border-b transition-colors"
-                    >
+                   <tr
+                     key={req.id}
+                     onClick={() => navigate(`/projects/${projectId}/requirements/${req.id}/generate`)}
+                     className="border-outline-variant/10 hover:bg-surface-container-high/50 cursor-pointer border-b transition-colors"
+                   >
                       <td className="text-primary p-4 text-sm font-medium">{req.requirementKey}</td>
                       <td className="text-on-surface max-w-xs truncate p-4 text-sm font-medium">
                         {req.title}

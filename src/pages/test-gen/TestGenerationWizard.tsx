@@ -22,6 +22,31 @@ const parseDescription = (description: string | undefined) => {
   }
 };
 
+// Helper to convert steps to Gherkin format
+const formatStepsToGherkin = (steps: any[]): string => {
+  if (!steps || steps.length === 0) return '';
+  
+  return steps.map((step, index) => {
+    const action = step.action || step.actionDescription || '';
+    const expected = step.expected_result || step.expectedResult || '';
+    
+    if (index === 0) {
+      // First step is Given
+      return `Given ${action}`;
+    } else if (index === steps.length - 1) {
+      // Last step is Then
+      return `Then ${action}`;
+    } else {
+      // Middle steps are When/And
+      if (index === 1) {
+        return `When ${action}`;
+      } else {
+        return `And ${action}`;
+      }
+    }
+  }).join('\n');
+};
+
 export const TestGenerationWizard = () => {
   const navigate = useNavigate();
   const { projectId, id: reqId } = useParams<{ projectId: string; id: string }>();
@@ -40,6 +65,10 @@ export const TestGenerationWizard = () => {
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   const [isLoadingSuites, setIsLoadingSuites] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [newSuiteName, setNewSuiteName] = useState('');
+  const [newSuiteDescription, setNewSuiteDescription] = useState('');
+  const [isCreatingSuite, setIsCreatingSuite] = useState(false);
 
   // UI Exploration settings
   const [baseUrl, setBaseUrl] = useState<string>('https://automationexercise.com');
@@ -54,6 +83,52 @@ export const TestGenerationWizard = () => {
       });
     }
   }, [projectId, reqId]);
+
+  // Fetch existing test cases for the requirement when page loads
+  useEffect(() => {
+    const fetchExistingTestCases = async () => {
+      if (!reqId) return;
+      try {
+        const existingCases = await testCaseApi.getTestCasesByRequirement(reqId);
+        if (existingCases && existingCases.length > 0) {
+          // Fetch steps for each test case
+          const casesWithSteps = await Promise.all(
+            existingCases.map(async (tc: any) => {
+              try {
+                const steps = await testCaseApi.getTestCaseSteps(tc.testCaseId);
+                return {
+                  testCaseId: tc.testCaseId,
+                  testCaseCode: tc.testCaseCode,
+                  title: tc.title,
+                  scenario: tc.title,
+                  precondition: tc.precondition,
+                  description: tc.description,
+                  steps: steps || [],
+                };
+              } catch (err) {
+                console.error(`Failed to fetch steps for TC ${tc.testCaseId}:`, err);
+                return {
+                  testCaseId: tc.testCaseId,
+                  testCaseCode: tc.testCaseCode,
+                  title: tc.title,
+                  scenario: tc.title,
+                  precondition: tc.precondition,
+                  description: tc.description,
+                  steps: [],
+                };
+              }
+            })
+          );
+          setGeneratedCases(casesWithSteps);
+          // Auto-select all loaded test cases
+          setSelectedTestCaseIds(existingCases.map((tc: any) => tc.testCaseId));
+        }
+      } catch (error) {
+        console.error('Failed to fetch existing test cases:', error);
+      }
+    };
+    fetchExistingTestCases();
+  }, [reqId]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -334,17 +409,27 @@ export const TestGenerationWizard = () => {
                         <Edit size={16} />
                       </button>
                     </div>
-                    <h3 className="mb-4 font-mono text-sm font-bold text-indigo-400">
-                      Scenario: {tc.scenario || tc.title}
-                    </h3>
-                    {tc.precondition && (
-                      <div className="mb-4">
-                        <span className="mb-1 block text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                          Preconditions
-                        </span>
-                        <p className="text-sm text-gray-300">{tc.precondition}</p>
-                      </div>
-                    )}
+                     <h3 className="mb-4 font-mono text-sm font-bold text-indigo-400">
+                       Scenario: {tc.scenario || tc.title}
+                     </h3>
+                     {(tc.description || tc.steps?.length > 0) && (
+                       <div className="mb-4">
+                         <span className="mb-1 block text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                           Gherkin
+                         </span>
+                         <pre className="rounded-lg border border-gray-800 bg-gray-900/50 p-3 text-xs text-emerald-300 whitespace-pre-wrap">
+                           {tc.description || formatStepsToGherkin(tc.steps)}
+                         </pre>
+                       </div>
+                     )}
+                     {tc.precondition && (
+                       <div className="mb-4">
+                         <span className="mb-1 block text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                           Preconditions
+                         </span>
+                         <p className="text-sm text-gray-300">{tc.precondition}</p>
+                       </div>
+                     )}
                     {tc.steps && tc.steps.length > 0 && (
                       <div>
                         <span className="mb-2 block text-xs font-semibold tracking-wider text-gray-500 uppercase">
@@ -466,11 +551,62 @@ export const TestGenerationWizard = () => {
               Add {selectedTestCaseIds.length} Test Case(s) to Test Suite
             </h3>
 
+            {/* Toggle between Select and Create */}
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={() => setIsCreateMode(false)}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  !isCreateMode
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                Select Existing
+              </button>
+              <button
+                onClick={() => setIsCreateMode(true)}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  isCreateMode
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                Create New
+              </button>
+            </div>
+
             {isLoadingSuites ? (
               <div className="text-sm text-gray-400">Loading test suites...</div>
+            ) : isCreateMode ? (
+              <div className="mb-6 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
+                    Suite Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newSuiteName}
+                    onChange={(e) => setNewSuiteName(e.target.value)}
+                    placeholder="Enter suite name..."
+                    className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
+                    Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newSuiteDescription}
+                    onChange={(e) => setNewSuiteDescription(e.target.value)}
+                    placeholder="Enter description (optional)..."
+                    className="w-full resize-none rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
             ) : testSuites.length === 0 ? (
               <div className="mb-6 text-sm text-gray-400">
-                No test suites found for this project. Please create a test suite first.
+                No test suites found for this project. Switch to "Create New" to create one.
               </div>
             ) : (
               <div className="mb-6 space-y-4">
@@ -500,11 +636,47 @@ export const TestGenerationWizard = () => {
                 Cancel
               </button>
               <button
-                onClick={handleAddToSuiteSubmit}
-                disabled={!selectedSuiteId || isSubmitting}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={async () => {
+                  if (isCreateMode) {
+                    // Create new suite
+                    if (!projectId || !newSuiteName.trim()) {
+                      alert('Please enter a suite name');
+                      return;
+                    }
+                    try {
+                      setIsCreatingSuite(true);
+                      const newSuite = await testSuiteApi.createTestSuite({
+                        suiteName: newSuiteName,
+                        description: newSuiteDescription,
+                        projectId: projectId,
+                        testCaseIds: selectedTestCaseIds,
+                      });
+                      setIsAddToSuiteModalOpen(false);
+                      setSelectedTestCaseIds([]);
+                      setNewSuiteName('');
+                      setNewSuiteDescription('');
+                      alert(`Successfully created suite "${newSuite.suiteName}" with ${selectedTestCaseIds.length} test case(s)!`);
+                    } catch (error) {
+                      console.error('Failed to create test suite:', error);
+                      alert('Failed to create test suite. Please try again.');
+                    } finally {
+                      setIsCreatingSuite(false);
+                    }
+                  } else {
+                    // Add to existing suite
+                    await handleAddToSuiteSubmit();
+                  }
+                }}
+                disabled={isCreateMode ? isCreatingSuite || !newSuiteName.trim() : !selectedSuiteId || isSubmitting}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? 'Adding...' : 'Add to Suite'}
+                {isCreateMode
+                  ? isCreatingSuite
+                    ? 'Creating...'
+                    : 'Create & Add'
+                  : isSubmitting
+                    ? 'Adding...'
+                    : 'Add to Suite'}
               </button>
             </div>
           </div>
