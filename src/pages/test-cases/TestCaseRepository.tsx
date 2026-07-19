@@ -1,4 +1,23 @@
 import React, { useState } from 'react';
+
+// Helper to format steps to Gherkin
+const formatStepsToGherkin = (steps: any[]): string => {
+  if (!steps || steps.length === 0) return '';
+  
+  return steps.map((step, index) => {
+    const action = step.action || step.actionDescription || '';
+    if (index === 0) {
+      return `Given ${action}`;
+    } else if (index === steps.length - 1) {
+      return `Then ${action}`;
+    } else if (index === 1) {
+      return `When ${action}`;
+    } else {
+      return `And ${action}`;
+    }
+  }).join('\n');
+};
+
 import { Search, Filter, Play, Trash, Code, Edit3, Save, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testCaseApi, type TestCase } from '@/features/project/api/testCases.api';
@@ -46,9 +65,7 @@ export const TestCaseRepository = () => {
 
   // Generate Script modal state
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [generateBaseUrl, setGenerateBaseUrl] = useState('https://example.com');
-  const [generateScriptLanguage, setGenerateScriptLanguage] = useState('javascript');
-  const [generateFramework, setGenerateFramework] = useState('playwright');
+  const [generateBaseUrl, setGenerateBaseUrl] = useState('');
 
   React.useEffect(() => {
     const fetchTestCases = async () => {
@@ -264,9 +281,7 @@ export const TestCaseRepository = () => {
   };
 
   const handleOpenGenerateModal = () => {
-    setGenerateBaseUrl('https://example.com');
-    setGenerateScriptLanguage('javascript');
-    setGenerateFramework('playwright');
+    setGenerateBaseUrl('');
     setIsGenerateModalOpen(true);
   };
 
@@ -283,8 +298,8 @@ export const TestCaseRepository = () => {
       const response = await testCaseApi.generateScript(
         selectedTc.testCaseId,
         generateBaseUrl,
-        generateScriptLanguage,
-        generateFramework
+        'javascript',
+        'playwright'
       );
 
       // Debug: Log response
@@ -367,7 +382,7 @@ export const TestCaseRepository = () => {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative z-0 flex h-full flex-col">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Test Case Repository</h1>
         <button
@@ -410,7 +425,7 @@ export const TestCaseRepository = () => {
           {/* Master List */}
           <div className={`flex-1 overflow-auto ${selectedTc ? 'border-r border-gray-800' : ''}`}>
             <table className="w-full border-collapse text-left">
-              <thead className="sticky top-0 bg-gray-950/50">
+              <thead className="sticky top-0 z-20 bg-gray-950/90 backdrop-blur-sm">
                 <tr>
                   <th className="w-12 p-4">
                     <input
@@ -521,6 +536,18 @@ export const TestCaseRepository = () => {
                     />
                   </div>
                 </div>
+
+                {/* Gherkin Display */}
+                {steps.length > 0 && (
+                  <div className="mb-4">
+                    <span className="mb-1 block text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                      Gherkin
+                    </span>
+                    <pre className="rounded-lg border border-gray-800 bg-gray-950/50 p-3 text-xs text-emerald-300 whitespace-pre-wrap">
+                      {selectedTc.description || formatStepsToGherkin(steps)}
+                    </pre>
+                  </div>
+                )}
 
                 {/* Tabs + Generate/Run Script Button */}
                 <div className="flex items-center justify-between border-b border-gray-800">
@@ -932,7 +959,7 @@ export const TestCaseRepository = () => {
       {/* Generate Script Modal */}
       {isGenerateModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">Generate Script + Test Data</h3>
               <button
@@ -943,60 +970,26 @@ export const TestCaseRepository = () => {
               </button>
             </div>
             <p className="mb-6 text-sm text-gray-400">
-              Configure the generation parameters for the test script and test data.
+              Script will be generated with JavaScript + Playwright framework. Enter the base URL below.
             </p>
 
-            <div className="space-y-5">
-              {/* Base URL */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
-                  Base URL
-                </label>
-                <input
-                  type="text"
-                  value={generateBaseUrl}
-                  onChange={(e) => setGenerateBaseUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Script Language */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
-                  Script Language
-                </label>
-                <select
-                  value={generateScriptLanguage}
-                  onChange={(e) => setGenerateScriptLanguage(e.target.value)}
-                  className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
-                >
-                  <option value="javascript">JavaScript</option>
-                  <option value="typescript">TypeScript</option>
-                  <option value="python">Python</option>
-                  <option value="java">Java</option>
-                </select>
-              </div>
-
-              {/* Framework */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
-                  Framework
-                </label>
-                <select
-                  value={generateFramework}
-                  onChange={(e) => setGenerateFramework(e.target.value)}
-                  className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
-                >
-                  <option value="playwright">Playwright</option>
-                  <option value="selenium">Selenium</option>
-                  <option value="cypress">Cypress</option>
-                  <option value="puppeteer">Puppeteer</option>
-                </select>
+            <div className="mb-6">
+              <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
+                Base URL
+              </label>
+              <input
+                type="text"
+                value={generateBaseUrl}
+                onChange={(e) => setGenerateBaseUrl(e.target.value)}
+                placeholder="https://example.com"
+                className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+              />
+              <div className="mt-2 text-xs text-gray-500">
+                Language: <span className="text-indigo-400">JavaScript</span> | Framework: <span className="text-indigo-400">Playwright</span>
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setIsGenerateModalOpen(false)}
                 className="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-700"
@@ -1008,34 +1001,7 @@ export const TestCaseRepository = () => {
                 disabled={isGeneratingScript}
                 className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isGeneratingScript ? (
-                  <>
-                    <svg
-                      className="animate-spin"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Now'
-                )}
+                {isGeneratingScript ? 'Generating...' : 'Generate Now'}
               </button>
             </div>
           </div>
