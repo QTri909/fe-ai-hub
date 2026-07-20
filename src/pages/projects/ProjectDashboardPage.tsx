@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectApi } from '@/features/project/api/project.api';
+import { projectApi, type ProjectStats } from '@/features/project/api/project.api';
 import { requirementApi } from '@/features/requirements/api/requirements.api';
 import type { Project } from '@/features/project/types/project.types';
 import { ROUTES } from '@/core/constants';
@@ -10,6 +10,7 @@ export const ProjectDashboardPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
+  const [projectStats, setProjectStats] = useState<ProjectStats | null>(null);
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -21,12 +22,14 @@ export const ProjectDashboardPage = () => {
       if (!projectId) return;
       try {
         if (showLoading) setIsLoading(true);
-        const [projectData, reqData] = await Promise.all([
+        const [projectData, reqData, statsData] = await Promise.all([
           projectApi.getProjectById(projectId),
           requirementApi.getByProjectId(projectId, 0, 100),
+          projectApi.getProjectStats(projectId)
         ]);
         setProject(projectData);
         setRequirementCount(reqData.totalElements || 0);
+        setProjectStats(statsData);
 
         // Fetch detail for each requirement to get test case counts
         if (reqData.content && reqData.content.length > 0) {
@@ -94,6 +97,11 @@ export const ProjectDashboardPage = () => {
   const handleStartAIGeneration = () => {
     navigate(`/projects/${projectId}/requirements`);
   };
+
+  // Calculate pass rate display
+  const passRateDisplay = projectStats?.passRate 
+    ? `${projectStats.passRate}%` 
+    : 'N/A';
 
   if (isLoading) {
     return (
@@ -233,9 +241,11 @@ export const ProjectDashboardPage = () => {
             </span>
           </div>
           <div className="flex items-end gap-3">
-            <h3 className="text-on-surface font-headline-lg text-4xl font-bold">N/A</h3>
+            <h3 className="text-on-surface font-headline-lg text-4xl font-bold">
+              {passRateDisplay}
+            </h3>
             <span className="text-on-surface-variant mb-1.5 text-xs font-medium">
-              No executions
+              {projectStats?.passRate ? `${projectStats.totalTestCases || 0} executions` : 'No executions'}
             </span>
           </div>
         </div>
@@ -250,7 +260,9 @@ export const ProjectDashboardPage = () => {
             </span>
           </div>
           <div className="flex items-end gap-3">
-            <h3 className="text-on-surface font-headline-lg text-4xl font-bold">0</h3>
+            <h3 className="text-on-surface font-headline-lg text-4xl font-bold">
+              {projectStats?.defects ?? 0}
+            </h3>
             <span className="text-on-surface-variant mb-1.5 text-xs font-medium">Reported</span>
           </div>
         </div>

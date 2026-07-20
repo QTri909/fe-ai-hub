@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspaceStore } from '@/core/store/workspace.store';
-import { projectApi } from '@/features/project/api/project.api';
+import { projectApi, type ProjectStats } from '@/features/project/api/project.api';
 import type { Project } from '@/features/project/types/project.types';
 import { DataMappingDialog } from './DataMappingDialog';
 import { ROUTES } from '@/core/constants';
@@ -10,12 +10,14 @@ export const ProjectsPage = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mappingProject, setMappingProject] = useState<Project | null>(null);
   const activeWorkspace = useWorkspaceStore(state => state.activeWorkspace);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     if (!activeWorkspace) return;
     try {
       setIsLoading(true);
@@ -26,7 +28,40 @@ export const ProjectsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeWorkspace]);
+
+  const fetchProjectStats = useCallback(async () => {
+    if (projects.length === 0) return;
+    try {
+      setIsLoadingStats(true);
+      const statsMap: Record<string, ProjectStats> = {};
+      await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const stats = await projectApi.getProjectStats(project.id);
+            statsMap[project.id] = stats;
+          } catch (error) {
+            console.error(`Failed to fetch stats for project ${project.id}`, error);
+          }
+        })
+      );
+      setProjectStats(statsMap);
+    } catch (error) {
+      console.error('Failed to fetch project stats', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, [projects]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      fetchProjectStats();
+    }
+  }, [fetchProjectStats, isLoading]);
 
   const handleSyncProjects = async () => {
     if (!activeWorkspace) return;
@@ -41,10 +76,6 @@ export const ProjectsPage = () => {
       setIsSyncing(false);
     }
   };
-
-  useEffect(() => {
-    fetchProjects();
-  }, [activeWorkspace]);
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-8">
@@ -123,66 +154,72 @@ export const ProjectsPage = () => {
             </button>
           </div>
         ) : (
-          projects.map(project => (
-            <div 
-              key={project.id} 
-              className="bg-surface-container-low rounded-lg border border-outline-variant/50 p-6 transition-all duration-300 card-glow group cursor-pointer"
-              onClick={() => navigate(`/projects/${project.id}`)}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined">account_tree</span>
+          projects.map(project => {
+            const stats = projectStats[project.id];
+            const passRateValue = stats?.passRate ?? 0;
+            const passRateDisplay = passRateValue > 0 ? `${passRateValue}%` : 'N/A';
+            
+            return (
+              <div 
+                key={project.id} 
+                className="bg-surface-container-low rounded-lg border border-outline-variant/50 p-6 transition-all duration-300 card-glow group cursor-pointer"
+                onClick={() => navigate(`/projects/${project.id}`)}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined">account_tree</span>
+                    </div>
+                    <div>
+                      <h3 className="font-title-lg text-body-lg font-bold text-on-surface truncate max-w-[150px] sm:max-w-[200px]">{project.name}</h3>
+                      <code className="font-code text-[11px] bg-surface-container-highest/50 px-1.5 py-0.5 rounded text-outline uppercase">KEY: {project.projectKey}</code>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); console.log('Project menu clicked for', project.name); }}
+                    className="text-on-surface-variant hover:bg-surface-bright/50 p-1 rounded-full transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined">more_vert</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  <div>
+                    <p className="text-[11px] text-on-surface-variant font-label-md uppercase mb-1">Total Issues</p>
+                    <p className="font-bold text-body-lg text-on-surface">{stats?.totalIssues ?? 0}</p>
                   </div>
                   <div>
-                    <h3 className="font-title-lg text-body-lg font-bold text-on-surface truncate max-w-[150px] sm:max-w-[200px]">{project.name}</h3>
-                    <code className="font-code text-[11px] bg-surface-container-highest/50 px-1.5 py-0.5 rounded text-outline uppercase">KEY: {project.projectKey}</code>
+                    <p className="text-[11px] text-on-surface-variant font-label-md uppercase mb-1">Suites</p>
+                    <p className="font-bold text-body-lg text-on-surface">{stats?.totalSuites ?? 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-on-surface-variant font-label-md uppercase mb-1">Pass Rate</p>
+                    <p className="font-bold text-body-lg text-on-surface-variant">{passRateDisplay}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); console.log('Project menu clicked for', project.name); }}
-                  className="text-on-surface-variant hover:bg-surface-bright/50 p-1 rounded-full transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined">more_vert</span>
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                <div>
-                  <p className="text-[11px] text-on-surface-variant font-label-md uppercase mb-1">Total Issues</p>
-                  <p className="font-bold text-body-lg text-on-surface">0</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-on-surface-variant font-label-md uppercase mb-1">Suites</p>
-                  <p className="font-bold text-body-lg text-on-surface">0</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-on-surface-variant font-label-md uppercase mb-1">Pass Rate</p>
-                  <p className="font-bold text-body-lg text-on-surface-variant">N/A</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-4 border-t border-outline-variant/20">
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-outline"></span>
-                  <span className="text-[12px] text-on-surface-variant">Never synced</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setMappingProject(project); }}
-                    className="text-xs font-bold text-tertiary hover:underline transition-all cursor-pointer flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">schema</span>
-                    Data Mapping
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}
-                    className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer"
-                  >
-                    View Details
-                  </button>
+                <div className="flex items-center justify-between pt-4 border-t border-outline-variant/20">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-outline"></span>
+                    <span className="text-[12px] text-on-surface-variant">Never synced</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setMappingProject(project); }}
+                      className="text-xs font-bold text-tertiary hover:underline transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">schema</span>
+                      Data Mapping
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}
+                      className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer"
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

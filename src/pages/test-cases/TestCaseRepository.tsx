@@ -62,6 +62,10 @@ export const TestCaseRepository = () => {
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   const [isLoadingSuites, setIsLoadingSuites] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [newSuiteName, setNewSuiteName] = useState('');
+  const [newSuiteDescription, setNewSuiteDescription] = useState('');
+  const [isCreatingSuite, setIsCreatingSuite] = useState(false);
 
   // Generate Script modal state
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
@@ -157,18 +161,40 @@ export const TestCaseRepository = () => {
   };
 
   const handleAddToSuiteSubmit = async () => {
-    if (!selectedSuiteId || selectedTestCaseIds.length === 0) return;
-    try {
-      setIsSubmitting(true);
-      await testSuiteApi.addTestCasesToSuite(selectedSuiteId, selectedTestCaseIds);
-      setIsAddToSuiteModalOpen(false);
-      setSelectedTestCaseIds([]);
-      alert('Successfully added test cases to suite!');
-    } catch (error) {
-      console.error('Failed to add test cases to suite:', error);
-      alert('Failed to add test cases to suite. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+    if (isCreateMode) {
+      // Create new suite then add test cases
+      if (!newSuiteName.trim() || !projectId) return;
+      try {
+        setIsCreatingSuite(true);
+const newSuite = await testSuiteApi.createTestSuite({
+          projectId: projectId,
+          suiteName: newSuiteName.trim(),
+          description: newSuiteDescription.trim(),
+          testCaseIds: selectedTestCaseIds,
+        });
+        setIsAddToSuiteModalOpen(false);
+        setSelectedTestCaseIds([]);
+        alert('Successfully created new test suite and added test cases!');
+      } catch (error) {
+        console.error('Failed to create suite:', error);
+        alert('Failed to create test suite. Please try again.');
+      } finally {
+        setIsCreatingSuite(false);
+      }
+    } else {
+      if (!selectedSuiteId || selectedTestCaseIds.length === 0) return;
+      try {
+        setIsSubmitting(true);
+        await testSuiteApi.addTestCasesToSuite(selectedSuiteId, selectedTestCaseIds);
+        setIsAddToSuiteModalOpen(false);
+        setSelectedTestCaseIds([]);
+        alert('Successfully added test cases to suite!');
+      } catch (error) {
+        console.error('Failed to add test cases to suite:', error);
+        alert('Failed to add test cases to suite. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -914,7 +940,58 @@ export const TestCaseRepository = () => {
               Add {selectedTestCaseIds.length} Test Case(s) to Test Suite
             </h3>
 
-            {isLoadingSuites ? (
+            {/* Toggle Selection Mode */}
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={() => setIsCreateMode(false)}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  !isCreateMode
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                Select Existing
+              </button>
+              <button
+                onClick={() => setIsCreateMode(true)}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  isCreateMode
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                Create New
+              </button>
+            </div>
+
+            {isCreateMode ? (
+              <div className="mb-6 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
+                    Suite Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newSuiteName}
+                    onChange={(e) => setNewSuiteName(e.target.value)}
+                    placeholder="Enter suite name..."
+                    className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
+                    Description
+                  </label>
+                  <textarea
+                    value={newSuiteDescription}
+                    onChange={(e) => setNewSuiteDescription(e.target.value)}
+                    placeholder="Optional description..."
+                    className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            ) : isLoadingSuites ? (
               <div className="text-sm text-gray-400">Loading test suites...</div>
             ) : testSuites.length === 0 ? (
               <div className="mb-6 text-sm text-gray-400">
@@ -949,10 +1026,10 @@ export const TestCaseRepository = () => {
               </button>
               <button
                 onClick={handleAddToSuiteSubmit}
-                disabled={!selectedSuiteId || isSubmitting}
+                disabled={isCreateMode ? !newSuiteName.trim() || isCreatingSuite : !selectedSuiteId || isSubmitting}
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? 'Adding...' : 'Add to Suite'}
+                {isSubmitting ? (isCreateMode ? 'Creating...' : 'Adding...') : (isCreateMode ? 'Create & Add' : 'Add to Suite')}
               </button>
             </div>
           </div>
