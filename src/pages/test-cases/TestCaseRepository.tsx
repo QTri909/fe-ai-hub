@@ -383,6 +383,15 @@ const newSuite = await testSuiteApi.createTestSuite({
       setIsGeneratingScript(true);
       const response = await testCaseApi.executeScript(selectedTc.testCaseId, baseUrl);
 
+      // Cập nhật status ngay trên danh sách và panel chi tiết mà không cần reload
+      const newStatus = response.passed ? 'PASSED' : 'FAILED';
+      setTestCases((prev) =>
+        prev.map((tc) =>
+          tc.testCaseId === selectedTc.testCaseId ? { ...tc, status: newStatus } : tc
+        )
+      );
+      setSelectedTc((prev: any) => (prev ? { ...prev, status: newStatus } : prev));
+
       // Luôn luôn refresh dữ liệu để cập nhật script/URL mới từ DB trước khi bung thông báo chặn UI
       await refreshDetails();
 
@@ -490,9 +499,11 @@ const newSuite = await testSuiteApi.createTestSuite({
                     <td className="p-4">
                       <span
                         className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          tc.status === 'APPROVED'
+                          tc.status === 'PASSED' || tc.status === 'APPROVED'
                             ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                            : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                            : tc.status === 'FAILED'
+                              ? 'border-red-500/20 bg-red-500/10 text-red-400'
+                              : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
                         }`}
                       >
                         {tc.status}
