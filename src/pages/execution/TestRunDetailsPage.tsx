@@ -38,16 +38,16 @@ export function TestRunDetailsPage() {
 
     return (
         <div className="p-8 max-w-[1400px] mx-auto text-gray-900 min-h-screen bg-gray-50/50">
-            
-            <button 
-                onClick={() => navigate(`/projects/${projectId}/test-runs`)}
-                className="mb-4 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition font-medium"
-            >
-                <ArrowLeft size={18} /> Back to Test Runs
-            </button>
 
             {/* Header Card */}
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-6">
+                <button
+                    type="button"
+                    onClick={() => navigate(`/projects/${projectId}/test-runs`)}
+                    className="mb-6 flex items-center gap-2 text-gray-900 font-bold hover:text-black transition"
+                >
+                    <ArrowLeft size={18} /> Back to Test Runs
+                </button>
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <h1 className="text-2xl font-extrabold flex items-center gap-3 text-gray-900">
