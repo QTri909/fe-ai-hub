@@ -832,7 +832,7 @@ export const TestCaseRepository = () => {
                                 className="mb-4 flex min-h-0 flex-1 flex-col rounded-lg border border-gray-800 p-3 last:mb-0"
                               >
                                 {isEditing ? (
-                                  <div className="space-y-2">
+                                  <div className="flex min-h-0 flex-1 flex-col">
                                     <input
                                       value={scriptEditForm.scriptName}
                                       onChange={(e) =>
@@ -841,7 +841,7 @@ export const TestCaseRepository = () => {
                                           scriptName: e.target.value,
                                         })
                                       }
-                                      className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+                                      className="mb-2 w-full shrink-0 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
                                     />
                                     <textarea
                                       value={scriptEditForm.scriptContent}
@@ -851,10 +851,9 @@ export const TestCaseRepository = () => {
                                           scriptContent: e.target.value,
                                         })
                                       }
-                                      className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 font-mono text-sm"
-                                      rows={14}
+                                      className="min-h-0 w-full flex-1 resize-none overflow-auto rounded border border-gray-700 bg-gray-900 px-2 py-1 font-mono text-sm whitespace-pre-wrap text-gray-300"
                                     />
-                                    <div className="flex gap-2">
+                                    <div className="mt-2 flex shrink-0 gap-2">
                                       <button
                                         onClick={saveScriptEdit}
                                         className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs"
