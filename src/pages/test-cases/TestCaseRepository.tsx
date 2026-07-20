@@ -600,7 +600,11 @@ export const TestCaseRepository = () => {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-6">
+              <div
+                className={`flex-1 min-h-0 p-6 ${
+                  activeTab === 'script' ? 'flex flex-col overflow-hidden' : 'overflow-auto'
+                }`}
+              >
                 {isLoadingDetails ? (
                   <div className="text-sm text-gray-400">Loading details...</div>
                 ) : (
@@ -816,7 +820,7 @@ export const TestCaseRepository = () => {
                       </div>
                     )}
                     {activeTab === 'script' && (
-                      <div className="h-full rounded-lg border border-gray-800 bg-gray-950 p-4">
+                      <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-800 bg-gray-950 p-4">
                         {scripts.length > 0 ? (
                           scripts.map((script: any) => {
                             const isEditing =
@@ -825,7 +829,7 @@ export const TestCaseRepository = () => {
                             return (
                               <div
                                 key={script.scriptId}
-                                className="mb-4 rounded-lg border border-gray-800 p-3"
+                                className="mb-4 flex min-h-0 flex-1 flex-col rounded-lg border border-gray-800 p-3 last:mb-0"
                               >
                                 {isEditing ? (
                                   <div className="space-y-2">
@@ -866,9 +870,9 @@ export const TestCaseRepository = () => {
                                     </div>
                                   </div>
                                 ) : (
-                                  <div>
-                                    <div className="flex items-center justify-between">
-                                      <div className="mb-1 text-xs text-gray-500">
+                                  <div className="flex min-h-0 flex-1 flex-col">
+                                    <div className="mb-2 flex shrink-0 items-center justify-between">
+                                      <div className="text-xs text-gray-500">
                                         {script.scriptName} (
                                         {script.scriptLanguage || script.framework})
                                       </div>
@@ -880,7 +884,7 @@ export const TestCaseRepository = () => {
                                         <Edit3 size={14} />
                                       </button>
                                     </div>
-                                    <pre className="max-h-96 overflow-auto font-mono text-sm text-gray-300">
+                                    <pre className="min-h-0 flex-1 overflow-auto font-mono text-sm whitespace-pre-wrap text-gray-300">
                                       {script.scriptContent}
                                     </pre>
                                   </div>
