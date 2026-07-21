@@ -383,6 +383,15 @@ const newSuite = await testSuiteApi.createTestSuite({
       setIsGeneratingScript(true);
       const response = await testCaseApi.executeScript(selectedTc.testCaseId, baseUrl);
 
+      // Cập nhật status ngay trên danh sách và panel chi tiết mà không cần reload
+      const newStatus = response.passed ? 'PASSED' : 'FAILED';
+      setTestCases((prev) =>
+        prev.map((tc) =>
+          tc.testCaseId === selectedTc.testCaseId ? { ...tc, status: newStatus } : tc
+        )
+      );
+      setSelectedTc((prev: any) => (prev ? { ...prev, status: newStatus } : prev));
+
       // Luôn luôn refresh dữ liệu để cập nhật script/URL mới từ DB trước khi bung thông báo chặn UI
       await refreshDetails();
 
@@ -490,9 +499,11 @@ const newSuite = await testSuiteApi.createTestSuite({
                     <td className="p-4">
                       <span
                         className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          tc.status === 'APPROVED'
+                          tc.status === 'PASSED' || tc.status === 'APPROVED'
                             ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                            : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                            : tc.status === 'FAILED'
+                              ? 'border-red-500/20 bg-red-500/10 text-red-400'
+                              : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
                         }`}
                       >
                         {tc.status}
@@ -626,7 +637,11 @@ const newSuite = await testSuiteApi.createTestSuite({
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-6">
+              <div
+                className={`flex-1 min-h-0 p-6 ${
+                  activeTab === 'script' ? 'flex flex-col overflow-hidden' : 'overflow-auto'
+                }`}
+              >
                 {isLoadingDetails ? (
                   <div className="text-sm text-gray-400">Loading details...</div>
                 ) : (
@@ -842,7 +857,7 @@ const newSuite = await testSuiteApi.createTestSuite({
                       </div>
                     )}
                     {activeTab === 'script' && (
-                      <div className="h-full rounded-lg border border-gray-800 bg-gray-950 p-4">
+                      <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-800 bg-gray-950 p-4">
                         {scripts.length > 0 ? (
                           scripts.map((script: any) => {
                             const isEditing =
@@ -851,10 +866,10 @@ const newSuite = await testSuiteApi.createTestSuite({
                             return (
                               <div
                                 key={script.scriptId}
-                                className="mb-4 rounded-lg border border-gray-800 p-3"
+                                className="mb-4 flex min-h-0 flex-1 flex-col rounded-lg border border-gray-800 p-3 last:mb-0"
                               >
                                 {isEditing ? (
-                                  <div className="space-y-2">
+                                  <div className="flex min-h-0 flex-1 flex-col">
                                     <input
                                       value={scriptEditForm.scriptName}
                                       onChange={(e) =>
@@ -863,7 +878,7 @@ const newSuite = await testSuiteApi.createTestSuite({
                                           scriptName: e.target.value,
                                         })
                                       }
-                                      className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+                                      className="mb-2 w-full shrink-0 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
                                     />
                                     <textarea
                                       value={scriptEditForm.scriptContent}
@@ -873,10 +888,9 @@ const newSuite = await testSuiteApi.createTestSuite({
                                           scriptContent: e.target.value,
                                         })
                                       }
-                                      className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 font-mono text-sm"
-                                      rows={14}
+                                      className="min-h-0 w-full flex-1 resize-none overflow-auto rounded border border-gray-700 bg-gray-900 px-2 py-1 font-mono text-sm whitespace-pre-wrap text-gray-300"
                                     />
-                                    <div className="flex gap-2">
+                                    <div className="mt-2 flex shrink-0 gap-2">
                                       <button
                                         onClick={saveScriptEdit}
                                         className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs"
@@ -892,9 +906,9 @@ const newSuite = await testSuiteApi.createTestSuite({
                                     </div>
                                   </div>
                                 ) : (
-                                  <div>
-                                    <div className="flex items-center justify-between">
-                                      <div className="mb-1 text-xs text-gray-500">
+                                  <div className="flex min-h-0 flex-1 flex-col">
+                                    <div className="mb-2 flex shrink-0 items-center justify-between">
+                                      <div className="text-xs text-gray-500">
                                         {script.scriptName} (
                                         {script.scriptLanguage || script.framework})
                                       </div>
@@ -906,7 +920,7 @@ const newSuite = await testSuiteApi.createTestSuite({
                                         <Edit3 size={14} />
                                       </button>
                                     </div>
-                                    <pre className="max-h-96 overflow-auto font-mono text-sm text-gray-300">
+                                    <pre className="min-h-0 flex-1 overflow-auto font-mono text-sm whitespace-pre-wrap text-gray-300">
                                       {script.scriptContent}
                                     </pre>
                                   </div>
