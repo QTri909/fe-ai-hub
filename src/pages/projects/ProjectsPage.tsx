@@ -99,14 +99,7 @@ export const ProjectsPage = () => {
             <span className="material-symbols-outlined text-[18px]">filter_list</span>
             <span>Filter View</span>
           </button>
-          {/* New Project */}
-          <button 
-            onClick={() => console.log('New Project clicked')}
-            className="flex items-center gap-1 px-6 py-2 rounded-md bg-tertiary-container text-on-tertiary-container font-semibold text-sm hover:brightness-110 active:scale-95 transition-all shadow-sm cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>New Project</span>
-          </button>
+
         </div>
       </div>
 
