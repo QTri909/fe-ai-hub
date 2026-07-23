@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -18,6 +18,7 @@ import {
   Check,
   Play,
   History,
+  Edit3,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { requirementApi } from '@/features/requirements';
@@ -51,7 +52,7 @@ export const RequirementsPage = () => {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'test-cases'>('overview');
 
-  // Specific requirement currently being generated (shows loading spinner directly on button)
+  // Specific requirement currently being generated
   const [generatingReqId, setGeneratingReqId] = useState<string | null>(null);
 
   // AC Filter for Test Cases tab
@@ -78,7 +79,21 @@ export const RequirementsPage = () => {
   const [runningTestCases, setRunningTestCases] = useState<Record<number, boolean>>({});
   const [historyModalTc, setHistoryModalTc] = useState<{ id: number; code: string; title: string } | null>(null);
   const [notifications, setNotifications] = useState<Array<{ id: string; testCaseCode: string; passed: boolean; message: string }>>([]);
+
+  // Edit modal state (single declaration)
+  const [editModal, setEditModal] = useState<{ visible: boolean; field: 'precondition' | 'expectedResult' | 'title' | 'steps' | 'testData' | 'scripts'; tc: any }>({ visible: false, field: 'precondition', tc: null });
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
+
   const [projectBaseUrl, setProjectBaseUrl] = useState<string>('');
+
+  const addEditNotification = (tcCode: string, success: boolean, message: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setNotifications(prev => [...prev, { id, testCaseCode: tcCode, passed: success, message }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 10000);
+  };
 
   const addNotification = (testCaseCode: string, passed: boolean, message: string) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -244,6 +259,70 @@ export const RequirementsPage = () => {
     }
   };
 
+  const handleOpenEdit = (tc: any, field: 'precondition' | 'expectedResult' | 'title' | 'steps' | 'testData' | 'scripts') => {
+    setEditModal({ visible: true, field, tc });
+    if (field === 'steps') {
+      setEditFormData({ steps: JSON.parse(JSON.stringify(tc.steps || [])) });
+    } else if (field === 'testData') {
+      setEditFormData({ testData: JSON.parse(JSON.stringify(tc.testData || [])) });
+    } else if (field === 'scripts') {
+      setEditFormData({ scriptContent: tc.scripts?.[0]?.scriptContent || '' });
+    } else {
+      setEditFormData({ value: tc[field] || '' });
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editModal.tc) return;
+    const tcData = editModal.tc;
+    setIsSaving(true);
+    try {
+      if (editModal.field === 'precondition') {
+        await testCaseApi.updateTestCase(tcData.testCaseId, { precondition: editFormData.value });
+      } else if (editModal.field === 'expectedResult') {
+        await testCaseApi.updateTestCase(tcData.testCaseId, { expectedResult: editFormData.value });
+      } else if (editModal.field === 'title') {
+        await testCaseApi.updateTestCase(tcData.testCaseId, { title: editFormData.value });
+      } else if (editModal.field === 'steps') {
+        for (const step of editFormData.steps || []) {
+          await testCaseApi.updateTestStep(tcData.testCaseId, step.stepId, {
+            stepOrder: step.stepOrder,
+            actionDescription: step.actionDescription,
+            expectedResult: step.expectedResult,
+          });
+        }
+      } else if (editModal.field === 'testData') {
+        for (const td of editFormData.testData || []) {
+          await testCaseApi.updateTestData(tcData.testCaseId, td.testDataId, {
+            dataName: td.dataName,
+            inputData: td.inputData,
+            expectedData: td.expectedData,
+          });
+        }
+      } else if (editModal.field === 'scripts') {
+        const script = tcData.scripts?.[0];
+        if (script) {
+          await testCaseApi.updateScript(tcData.testCaseId, script.scriptId, {
+            scriptContent: editFormData.scriptContent,
+          });
+        }
+      }
+      if (selectedReq) {
+        const updatedCases = await fetchTestCasesWithSteps(selectedReq.id);
+        setTestCases(updatedCases);
+      }
+      setEditModal({ visible: false, field: 'precondition', tc: null });
+      setEditFormData({});
+      addEditNotification(tcData.testCaseCode, true, `${editModal.field} updated successfully!`);
+    } catch (error: any) {
+      console.error("Failed to save edit:", error);
+      const errMsg = error.response?.data?.message || error.message || "Failed to save changes.";
+      addEditNotification(tcData.testCaseCode, false, errMsg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleRunTestCase = async (tc: TestCase) => {
     let baseUrl = '';
     if (projectId) {
@@ -328,7 +407,7 @@ export const RequirementsPage = () => {
     }
   };
 
-  // Generate Test Cases directly on button click (re-renders US card when finished)
+  // Generate Test Cases directly on button click
   const handleGenerateTestCases = async (reqToGen: Requirement, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (generatingReqId) return;
@@ -374,7 +453,6 @@ export const RequirementsPage = () => {
         }
       }
 
-      // Refresh requirements list to update US status badge & counts
       await fetchRequirements();
     } catch (error) {
       console.error('Failed to generate test cases', error);
@@ -383,7 +461,7 @@ export const RequirementsPage = () => {
     }
   };
 
-  // Generate Test Cases inside Drawer (re-renders drawer content & main list)
+  // Generate Test Cases inside Drawer
   const handleGenerateDrawerTestCases = async (reqToGen: Requirement) => {
     if (!reqToGen || generatingReqId) return;
 
@@ -426,7 +504,6 @@ export const RequirementsPage = () => {
         }
       }
 
-      // Refetch detail and test cases with steps inside drawer
       const [detailData, tcsData] = await Promise.all([
         requirementApi.getDetail(reqToGen.id).catch(() => null),
         fetchTestCasesWithSteps(reqToGen.id),
@@ -437,7 +514,7 @@ export const RequirementsPage = () => {
 
       setActiveDetailTab('test-cases');
       setSelectedAcFilter('ALL');
-      await fetchRequirements(); // Refresh main list
+      await fetchRequirements();
     } catch (error) {
       console.error('Failed to generate test cases inside drawer', error);
     } finally {
@@ -1068,7 +1145,7 @@ export const RequirementsPage = () => {
                             key={tc.testCaseId}
                             className="rounded-xl border border-slate-800 bg-slate-900/80 overflow-hidden transition-all shadow-md"
                           >
-                            {/* Card Header & Title - Exactly matching user's reference image */}
+                            {/* Card Header & Title */}
                             <div
                               onClick={() => setExpandedTcId(isExpanded ? null : tc.testCaseId)}
                               className="p-5 cursor-pointer hover:bg-slate-850/50 transition-colors space-y-3"
@@ -1152,14 +1229,22 @@ export const RequirementsPage = () => {
                               </h4>
                             </div>
 
-                            {/* Card Body - Matching reference image sections */}
+                            {/* Card Body */}
                             {isExpanded && (
                               <div className="px-5 pb-6 pt-2 border-t border-slate-800/80 bg-slate-950/70 space-y-5 text-xs">
                                 {/* Section 1: PRECONDITIONS */}
                                 <div className="space-y-1.5">
-                                  <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-                                    PRECONDITIONS
-                                  </h5>
+                                  <div className="flex items-center justify-between">
+                                    <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                                      PRECONDITIONS
+                                    </h5>
+                                    <button
+                                      onClick={() => handleOpenEdit(tc, 'precondition')}
+                                      className="flex items-center gap-1 text-slate-400 hover:text-white text-[10px] px-2 py-1 rounded border border-slate-700 hover:border-slate-600 transition cursor-pointer"
+                                    >
+                                      <Edit3 size={10} /> Edit
+                                    </button>
+                                  </div>
                                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-xs leading-relaxed font-sans">
                                     {tc.precondition && tc.precondition.trim() !== ''
                                       ? tc.precondition
@@ -1167,11 +1252,19 @@ export const RequirementsPage = () => {
                                   </div>
                                 </div>
 
-                                {/* Section 2: TEST STEPS Table (# and Action Description) */}
+                                {/* Section 2: TEST STEPS Table */}
                                 <div className="space-y-1.5">
-                                  <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-                                    TEST STEPS
-                                  </h5>
+                                  <div className="flex items-center justify-between">
+                                    <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                                      TEST STEPS
+                                    </h5>
+                                    <button
+                                      onClick={() => handleOpenEdit(tc, 'steps')}
+                                      className="flex items-center gap-1 text-slate-400 hover:text-white text-[10px] px-2 py-1 rounded border border-slate-700 hover:border-slate-600 transition cursor-pointer"
+                                    >
+                                      <Edit3 size={10} /> Edit
+                                    </button>
+                                  </div>
                                   <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/90">
                                     <table className="w-full text-left border-collapse">
                                       <thead>
@@ -1210,9 +1303,17 @@ export const RequirementsPage = () => {
 
                                 {/* Section 3: EXPECTED RESULT (Overall TC expected result) */}
                                 <div className="space-y-1.5">
-                                  <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-                                    EXPECTED RESULT
-                                  </h5>
+                                  <div className="flex items-center justify-between">
+                                    <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                                      EXPECTED RESULT
+                                    </h5>
+                                    <button
+                                      onClick={() => handleOpenEdit(tc, 'expectedResult')}
+                                      className="flex items-center gap-1 text-slate-400 hover:text-white text-[10px] px-2 py-1 rounded border border-slate-700 hover:border-slate-600 transition cursor-pointer"
+                                    >
+                                      <Edit3 size={10} /> Edit
+                                    </button>
+                                  </div>
                                   <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-emerald-300 text-xs leading-relaxed font-sans font-medium">
                                     {tc.expectedResult && tc.expectedResult.trim() !== ''
                                       ? tc.expectedResult
@@ -1220,7 +1321,7 @@ export const RequirementsPage = () => {
                                   </div>
                                 </div>
 
-                                {/* Section 4: ACTUAL RESULT (Hidden temporarily while pending execution) */}
+                                {/* Section 4: ACTUAL RESULT */}
                                 {tc.actualResult && tc.actualResult.trim() !== '' && (
                                   <div className="space-y-1.5">
                                     <h5 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
@@ -1235,9 +1336,17 @@ export const RequirementsPage = () => {
                                 {/* Section 5: TEST DATA */}
                                 {tc.testData && tc.testData.length > 0 && (
                                   <div className="space-y-1.5 animate-fade-in">
-                                    <h5 className="text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider">
-                                      TEST DATA
-                                    </h5>
+                                    <div className="flex items-center justify-between">
+                                      <h5 className="text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider">
+                                        TEST DATA
+                                      </h5>
+                                      <button
+                                        onClick={() => handleOpenEdit(tc, 'testData')}
+                                        className="flex items-center gap-1 text-slate-400 hover:text-white text-[10px] px-2 py-1 rounded border border-slate-700 hover:border-slate-600 transition cursor-pointer"
+                                      >
+                                        <Edit3 size={10} /> Edit
+                                      </button>
+                                    </div>
                                     <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/90 shadow-inner">
                                       <table className="w-full text-left border-collapse">
                                         <thead>
@@ -1264,19 +1373,29 @@ export const RequirementsPage = () => {
                                 {/* Section 6: TEST SCRIPT */}
                                 {tc.scripts && tc.scripts.length > 0 && (
                                   <div className="space-y-1.5 animate-fade-in">
-                                    <h5 className="text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider flex items-center justify-between">
-                                      <span>TEST SCRIPT ({tc.scripts[0].framework || 'playwright'})</span>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(tc.scripts![0].scriptContent || '');
-                                          alert('Successfully copied test script to clipboard!');
-                                        }}
-                                        className="text-[10px] bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold px-2.5 py-1 rounded border border-slate-700 transition cursor-pointer active:scale-95"
-                                      >
-                                        Copy Script
-                                      </button>
-                                    </h5>
+                                    <div className="flex items-center justify-between">
+                                      <h5 className="text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider">
+                                        TEST SCRIPT ({tc.scripts[0].framework || 'playwright'})
+                                      </h5>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleOpenEdit(tc, 'scripts')}
+                                          className="flex items-center gap-1 text-slate-400 hover:text-white text-[10px] px-2 py-1 rounded border border-slate-700 hover:border-slate-600 transition cursor-pointer"
+                                        >
+                                          <Edit3 size={10} /> Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigator.clipboard.writeText(tc.scripts![0].scriptContent || '');
+                                            alert('Successfully copied test script to clipboard!');
+                                          }}
+                                          className="text-[10px] bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold px-2.5 py-1 rounded border border-slate-700 transition cursor-pointer active:scale-95"
+                                        >
+                                          Copy Script
+                                        </button>
+                                      </div>
+                                    </div>
                                     <pre className="p-4 rounded-xl bg-slate-950/80 border border-slate-850 text-indigo-300 text-[11px] overflow-x-auto font-mono max-h-60 custom-scrollbar leading-relaxed">
                                       {tc.scripts[0].scriptContent || '// Empty script content'}
                                     </pre>
@@ -1292,174 +1411,284 @@ export const RequirementsPage = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Drawer Footer Actions */}
-            <div className="p-6 border-t border-slate-800 bg-slate-950/80 flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => handleGenerateDrawerTestCases(selectedReq)}
-                disabled={generatingReqId === selectedReq.id}
-                className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Sparkles size={18} className={generatingReqId === selectedReq.id ? 'animate-spin' : ''} />
-                <span>
-                  {generatingReqId === selectedReq.id ? 'Generating Test Cases...' : 'Generate Test Cases'}
-                </span>
+      {/* Edit Modal */}
+      {editModal.visible && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setEditModal({ visible: false, field: 'precondition', tc: null })}>
+          <div className="w-full max-w-2xl rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white capitalize">
+                Edit {editModal.field.replace(/([A-Z])/g, " $1")}
+                <span className="ml-2 text-indigo-400 text-sm font-mono">{editModal.tc?.testCaseCode}</span>
+              </h3>
+              <button onClick={() => setEditModal({ visible: false, field: 'precondition', tc: null })} className="text-gray-400 hover:text-white p-1"><X size={20} /></button>
+            </div>
+            
+            <div className="space-y-4">
+              {editModal.field === 'steps' && (
+                <div className="space-y-3">
+                  {(editFormData.steps || []).map((step: any, idx: number) => (
+                    <div key={step.stepId || idx} className="grid grid-cols-12 gap-3 p-3 rounded-lg bg-gray-950/50 border border-gray-800">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Order</label>
+                        <input
+                          type="number"
+                          value={step.stepOrder || idx + 1}
+                          onChange={(e) => {
+                            const newSteps = [...editFormData.steps];
+                            newSteps[idx].stepOrder = parseInt(e.target.value) || idx + 1;
+                            setEditFormData({ ...editFormData, steps: newSteps });
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-gray-900 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Action Description</label>
+                        <textarea
+                          value={step.actionDescription || ''}
+                          onChange={(e) => {
+                            const newSteps = [...editFormData.steps];
+                            newSteps[idx].actionDescription = e.target.value;
+                            setEditFormData({ ...editFormData, steps: newSteps });
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-gray-900 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none resize-none"
+                          rows={2}
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Expected Result</label>
+                        <textarea
+                          value={step.expectedResult || ''}
+                          onChange={(e) => {
+                            const newSteps = [...editFormData.steps];
+                            newSteps[idx].expectedResult = e.target.value;
+                            setEditFormData({ ...editFormData, steps: newSteps });
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-gray-900 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none resize-none"
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {editModal.field === 'testData' && (
+                <div className="space-y-3">
+                  {(editFormData.testData || []).map((td: any, idx: number) => (
+                    <div key={td.testDataId || idx} className="grid grid-cols-12 gap-3 p-3 rounded-lg bg-gray-950/50 border border-gray-800">
+                      <div className="col-span-4">
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Data Name</label>
+                        <input
+                          type="text"
+                          value={td.dataName || ''}
+                          onChange={(e) => {
+                            const newData = [...editFormData.testData];
+                            newData[idx].dataName = e.target.value;
+                            setEditFormData({ ...editFormData, testData: newData });
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-gray-900 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Input Data</label>
+                        <input
+                          type="text"
+                          value={td.inputData || ''}
+                          onChange={(e) => {
+                            const newData = [...editFormData.testData];
+                            newData[idx].inputData = e.target.value;
+                            setEditFormData({ ...editFormData, testData: newData });
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-gray-900 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Expected Data</label>
+                        <input
+                          type="text"
+                          value={td.expectedData || ''}
+                          onChange={(e) => {
+                            const newData = [...editFormData.testData];
+                            newData[idx].expectedData = e.target.value;
+                            setEditFormData({ ...editFormData, testData: newData });
+                          }}
+                          className="w-full rounded-md border border-gray-800 bg-gray-900 px-3 py-1.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {editModal.field === 'scripts' && (
+                <textarea
+                  value={editFormData.scriptContent || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, scriptContent: e.target.value })}
+                  className="w-full min-h-[300px] rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 font-mono text-sm text-gray-200 focus:border-indigo-500 focus:outline-none resize-y"
+                  placeholder="Enter script content..."
+                  rows={12}
+                />
+              )}
+
+              {editModal.field === 'precondition' && (
+                <textarea
+                  value={editFormData.value || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, value: e.target.value })}
+                  className="w-full min-h-[200px] rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 font-mono text-sm text-gray-200 focus:border-indigo-500 focus:outline-none resize-y"
+                  placeholder="Enter precondition..."
+                  rows={6}
+                />
+              )}
+
+              {editModal.field === 'expectedResult' && (
+                <textarea
+                  value={editFormData.value || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, value: e.target.value })}
+                  className="w-full min-h-[200px] rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 font-mono text-sm text-gray-200 focus:border-indigo-500 focus:outline-none resize-y"
+                  placeholder="Enter expected result..."
+                  rows={6}
+                />
+              )}
+
+              {editModal.field === 'title' && (
+                <input
+                  type="text"
+                  value={editFormData.value || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, value: e.target.value })}
+                  className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-3 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                  placeholder="Enter test case title..."
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => setEditModal({ visible: false, field: 'precondition', tc: null })} className="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition">
+                Cancel
               </button>
-
-              <button
-                onClick={() => setSelectedReq(null)}
-                className="border border-slate-700 hover:bg-slate-800 text-slate-300 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer"
-              >
-                Close
+              <button onClick={handleSaveEdit} disabled={isSaving} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2">
+                {isSaving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
         </div>
       )}
+
       {/* Add to Suite Modal */}
       {isAddToSuiteModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
-            <h3 className="mb-4 text-lg font-bold text-white">
-              Add {selectedTestCaseIds.length} Test Case(s) to Test Suite
-            </h3>
-
-            {/* Toggle Selection Mode */}
-            <div className="mb-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsCreateMode(false)}
-                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  !isCreateMode
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                Select Existing
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsCreateMode(true)}
-                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  isCreateMode
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                Create New
-              </button>
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setIsAddToSuiteModalOpen(false)}>
+          <div className="w-full max-w-md rounded-xl border border-gray-800 bg-gray-900 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">
+                {isCreateMode ? 'Create New Test Suite' : 'Add to Test Suite'}
+              </h3>
+              <button onClick={() => setIsAddToSuiteModalOpen(false)} className="text-gray-400 hover:text-white p-1"><X size={20} /></button>
             </div>
 
-            {isCreateMode ? (
-              <div className="mb-6 space-y-4">
+            <div className="space-y-4">
+              {!isCreateMode ? (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
-                    Suite Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newSuiteName}
-                    onChange={(e) => setNewSuiteName(e.target.value)}
-                    placeholder="Enter suite name..."
-                    className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
-                  />
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Select Test Suite</label>
+                  <select
+                    value={selectedSuiteId || ''}
+                    onChange={(e) => setSelectedSuiteId(Number(e.target.value) || null)}
+                    className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-2.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">Select a suite...</option>
+                    {testSuites.map((suite) => (
+                      <option key={suite.suiteId} value={suite.suiteId}>
+                        {suite.suiteName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-400 uppercase">
-                    Description
-                  </label>
-                  <textarea
-                    value={newSuiteDescription}
-                    onChange={(e) => setNewSuiteDescription(e.target.value)}
-                    placeholder="Optional description..."
-                    className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-255 focus:border-indigo-500 focus:outline-none"
-                    rows={3}
-                  />
-                </div>
-              </div>
-            ) : isLoadingSuites ? (
-              <div className="text-sm text-gray-400">Loading test suites...</div>
-            ) : testSuites.length === 0 ? (
-              <div className="mb-6 text-sm text-gray-400">
-                No test suites found for this project. Please create a test suite first.
-              </div>
-            ) : (
-              <div className="mb-6 space-y-4">
-                <label className="block text-xs font-semibold text-gray-400 uppercase">
-                  Select Test Suite
-                </label>
-                <select
-                  value={selectedSuiteId || ''}
-                  onChange={(e) => setSelectedSuiteId(Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-800 bg-gray-950 p-2.5 text-gray-200 outline-none focus:border-indigo-500"
-                >
-                  <option value="">-- Choose a Test Suite --</option>
-                  {testSuites.map((suite) => (
-                    <option key={suite.suiteId} value={suite.suiteId}>
-                      {suite.suiteName} ({suite.suiteCode})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1">Suite Name</label>
+                    <input
+                      type="text"
+                      value={newSuiteName}
+                      onChange={(e) => setNewSuiteName(e.target.value)}
+                      className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-2.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none"
+                      placeholder="Enter suite name..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1">Description (Optional)</label>
+                    <textarea
+                      value={newSuiteDescription}
+                      onChange={(e) => setNewSuiteDescription(e.target.value)}
+                      className="w-full rounded-lg border border-gray-800 bg-gray-950 px-4 py-2.5 text-sm text-gray-200 focus:border-indigo-500 focus:outline-none resize-none"
+                      placeholder="Enter description..."
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
 
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsAddToSuiteModalOpen(false)}
-                className="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-700"
-              >
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400">Or:</span>
+                <button
+                  onClick={() => {
+                    setIsCreateMode(!isCreateMode);
+                    setSelectedSuiteId(null);
+                  }}
+                  className="text-indigo-400 hover:text-indigo-300 font-semibold"
+                >
+                  {isCreateMode ? 'Select existing suite instead' : 'Create new test suite'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setIsAddToSuiteModalOpen(false)} className="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition">
                 Cancel
               </button>
               <button
-                type="button"
                 onClick={handleAddToSuiteSubmit}
-                disabled={isCreateMode ? !newSuiteName.trim() || isCreatingSuite : !selectedSuiteId || isSubmitting}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isSubmitting || isCreatingSuite}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition disabled:opacity-50"
               >
-                {isSubmitting ? (isCreateMode ? 'Creating...' : 'Adding...') : (isCreateMode ? 'Create & Add' : 'Add to Suite')}
+                {isSubmitting || isCreatingSuite ? 'Saving...' : (isCreateMode ? 'Create Suite & Add TCs' : 'Add to Suite')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Notifications Toast Tray */}
-      <div className="fixed bottom-5 right-5 z-[200] flex flex-col gap-3 max-w-sm w-full">
+      {/* Notifications */}
+      <div className="fixed bottom-4 right-4 z-[200] space-y-2 max-w-sm">
         {notifications.map((notif) => (
           <div
             key={notif.id}
-            className={`p-4 rounded-xl border shadow-xl flex flex-col gap-1.5 transition-all text-xs text-white ${
-              notif.passed
-                ? 'bg-emerald-950/90 border-emerald-500/30'
-                : 'bg-rose-950/90 border-rose-500/30'
-            }`}
+            className="animate-fade-in flex items-start gap-3 p-4 rounded-xl border shadow-2xl backdrop-blur-sm"
+            style={{
+              backgroundColor: notif.passed ? 'rgba(6, 78, 59, 0.95)' : 'rgba(127, 29, 29, 0.95)',
+              borderColor: notif.passed ? '#065f46' : '#7f1d1d',
+            }}
           >
-            <div className="flex items-center justify-between font-bold">
-              <span className="flex items-center gap-1.5">
-                {notif.passed ? <CheckCircle2 size={14} className="text-emerald-400" /> : <X size={14} className="text-rose-400" />}
-                TC Run Complete: {notif.testCaseCode}
-              </span>
-              <button
-                onClick={() => setNotifications(prev => prev.filter(n => n.id !== notif.id))}
-                className="text-slate-400 hover:text-white"
-              >
-                <X size={14} />
-              </button>
+            <div className="shrink-0 mt-0.5">
+              {notif.passed ? (
+                <CheckCircle2 size={20} className="text-emerald-400" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <X size={14} className="text-red-400" />
+                </div>
+              )}
             </div>
-            <p className="text-slate-300 leading-relaxed font-sans">{notif.message}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs font-bold text-white">{notif.testCaseCode}</span>
+              </div>
+              <p className="text-xs text-slate-300 break-words">{notif.message}</p>
+            </div>
           </div>
         ))}
       </div>
-
-      {historyModalTc && (
-        <TestCaseHistoryModal
-          testCaseId={historyModalTc.id}
-          testCaseCode={historyModalTc.code}
-          testCaseTitle={historyModalTc.title}
-          onClose={() => setHistoryModalTc(null)}
-        />
-      )}
     </div>
   );
 };
