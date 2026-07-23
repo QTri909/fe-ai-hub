@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, XCircle, Clock, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { Play, CheckCircle2, XCircle, Clock, ChevronRight, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { testRunApi } from '@/features/project/api/testRuns.api';
 import type { TestRun } from '@/features/project/api/testRuns.api';
 
@@ -53,6 +53,12 @@ export function TestRunsPage() {
 
     return (
         <div className="p-8 max-w-[1400px] mx-auto text-slate-900 min-h-screen bg-slate-50">
+            <button
+                onClick={() => navigate(`/projects/${projectId}/test-suites`)}
+                className="mb-5 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-400 hover:text-blue-900 transition-all font-bold text-base shadow-sm"
+            >
+                <ArrowLeft size={20} strokeWidth={2.5} /> Back to Test Suites
+            </button>
             <div className="flex justify-between items-center my-6">
                 <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Test Runs</h1>
                 <button 
