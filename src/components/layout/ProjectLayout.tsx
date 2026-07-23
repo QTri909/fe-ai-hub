@@ -14,10 +14,9 @@ export const ProjectLayout = () => {
   const navItems: NavItem[] = [
     { name: 'Dashboard', path: `/projects/${projectId}`, icon: 'dashboard', end: true },
     { name: 'Requirements', path: `/projects/${projectId}/requirements`, icon: 'list_alt' },
-    { name: 'Test Cases', path: `/projects/${projectId}/test-cases`, icon: 'checklist' },
     { name: 'Test Suites', path: `/projects/${projectId}/test-suites`, icon: 'biotech' },
-    { name: 'Test Runs', path: `/projects/${projectId}/test-runs`, icon: 'history' },
     { name: 'AI Agents', path: `/projects/${projectId}/test-runner`, icon: 'smart_toy' },
+    { name: 'Environments', path: `/projects/${projectId}/environments`, icon: 'settings' },
   ];
 
   // If no active workspace, redirect to workspace list
