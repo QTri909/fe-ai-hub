@@ -107,14 +107,19 @@ export const LoginPage = () => {
           )}
 
           {/* Form */}
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
+            {/* Dummy hidden inputs to prevent browser password manager autofill */}
+            <input type="text" style={{ display: 'none' }} tabIndex={-1} readOnly />
+            <input type="password" style={{ display: 'none' }} tabIndex={-1} readOnly />
+
             {!isLoginMode && (
               <div className="space-y-2">
                 <label className="font-label-md text-label-md text-on-surface" htmlFor="fullName">Full Name</label>
                 <input 
                   className="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm placeholder:text-on-surface-variant/50" 
                   id="fullName" 
-                  placeholder="John Doe" 
+                  name="user_fullname_no_autofill"
+                  autoComplete="off"
                   type="text" 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -125,9 +130,10 @@ export const LoginPage = () => {
             <div className="space-y-2">
               <label className="font-label-md text-label-md text-on-surface" htmlFor="email">Email Address</label>
               <input 
-                className="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm placeholder:text-on-surface-variant/50" 
+                className="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" 
                 id="email" 
-                placeholder="name@company.com" 
+                name="user_email_no_autofill"
+                autoComplete="off"
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -138,9 +144,10 @@ export const LoginPage = () => {
               <label className="font-label-md text-label-md text-on-surface" htmlFor="password">Password</label>
               <div className="relative">
                 <input 
-                  className="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm placeholder:text-on-surface-variant/50" 
+                  className="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" 
                   id="password" 
-                  placeholder="••••••••" 
+                  name="user_password_no_autofill"
+                  autoComplete="new-password"
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

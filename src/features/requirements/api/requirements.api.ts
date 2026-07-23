@@ -69,6 +69,28 @@ export const requirementApi = {
     return response.data;
   },
 
+  generateAllInOne: async (
+    id: string,
+    payload: GenerateTestCasesPayload
+  ): Promise<{ status: string; job_id: string; message: string }> => {
+    const response = await httpClient.post<{ status: string; job_id: string; message: string }>(
+      `${BASE_URL}/${id}/generate-all-in-one`,
+      payload,
+      { timeout: 30000 }
+    );
+    return response.data;
+  },
+
+  getJobStatus: async (
+    requirementId: string,
+    jobId: string
+  ): Promise<{ status: string; progress?: number; message?: string; result?: any }> => {
+    const response = await httpClient.get<{ status: string; progress?: number; message?: string; result?: any }>(
+      `${BASE_URL}/${requirementId}/generate-jobs/${jobId}`
+    );
+    return response.data;
+  },
+
   /**
    * (Legacy) Lấy Acceptance Criteria theo Requirement
    * GET /api/v1/acceptance-criterias/by-requirement/{requirementId}
