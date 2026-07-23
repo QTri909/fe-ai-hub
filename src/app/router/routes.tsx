@@ -127,6 +127,14 @@ export const routes: RouteObject[] = [
             },
           },
           {
+            path: 'test-suites/:suiteId',
+            lazy: async () => {
+              const { TestSuiteDetailPage } =
+                await import('@/pages/test-suites/TestSuiteDetailPage');
+              return { Component: TestSuiteDetailPage };
+            },
+          },
+          {
             path: 'environments',
             lazy: async () => {
               const { EnvironmentsPage } = await import('@/pages/environments/EnvironmentsPage');
