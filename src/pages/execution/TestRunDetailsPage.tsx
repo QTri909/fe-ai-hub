@@ -31,19 +31,20 @@ export function TestRunDetailsPage() {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500"><Loader2 className="animate-spin inline-block mr-2"/> Loading Details...</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500"><Loader2 className="animate-spin inline-block mr-2" /> Loading Details...</div>;
     if (!run) return <div className="p-8 text-center text-red-500">Run not found.</div>;
 
     const skippedCount = run.totalTests - (run.passedCount || 0) - (run.failedCount || 0);
 
     return (
         <div className="p-8 max-w-[1400px] mx-auto text-gray-900 min-h-screen bg-gray-50/50">
-            
-            <button 
+
+            <button
                 onClick={() => navigate(`/projects/${projectId}/test-runs`)}
-                className="mb-4 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition font-medium"
+                className="mb-5 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-400 hover:text-blue-900 transition-all font-bold text-base shadow-sm"
             >
-                <ArrowLeft size={18} /> Back to Test Runs
+                <ArrowLeft size={20} strokeWidth={2.5} /> Back to Test Runs
+
             </button>
 
             {/* Header Card */}
@@ -79,7 +80,7 @@ export function TestRunDetailsPage() {
                             </span>
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                         <button className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition shadow-sm">
                             <Bug size={18} className="text-blue-600" /> Create Jira Bug
@@ -144,15 +145,14 @@ export function TestRunDetailsPage() {
                         {run.runItems?.map(item => {
                             const isPassed = item.status === 'PASSED';
                             const isSelected = selectedItem?.runItemId === item.runItemId;
-                            
+
                             return (
-                                <div 
+                                <div
                                     key={item.runItemId}
                                     onClick={() => setSelectedItem(item)}
-                                    className={`p-3 rounded-xl cursor-pointer transition flex items-center justify-between border-l-4 ${
-                                        isSelected ? (isPassed ? 'bg-emerald-50 border-emerald-500' : 'bg-red-50 border-red-500')
-                                        : (isPassed ? 'bg-white hover:bg-gray-50 border-emerald-500 shadow-sm' : 'bg-white hover:bg-gray-50 border-red-500 shadow-sm')
-                                    }`}
+                                    className={`p-3 rounded-xl cursor-pointer transition flex items-center justify-between border-l-4 ${isSelected ? (isPassed ? 'bg-emerald-50 border-emerald-500' : 'bg-red-50 border-red-500')
+                                            : (isPassed ? 'bg-white hover:bg-gray-50 border-emerald-500 shadow-sm' : 'bg-white hover:bg-gray-50 border-red-500 shadow-sm')
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3 overflow-hidden flex-1">
                                         {isPassed ? <CheckCircle2 className="text-emerald-500 shrink-0" size={18} /> : <XCircle className="text-red-500 shrink-0" size={18} />}
@@ -189,11 +189,11 @@ export function TestRunDetailsPage() {
                                     </h2>
                                     {selectedItem.status === 'FAILED' ? (
                                         <span className="px-3 py-1 rounded-full text-sm font-bold bg-red-50 text-red-700 border border-red-200 flex items-center gap-1.5">
-                                            <XCircle size={14} className="text-red-500"/> Failed
+                                            <XCircle size={14} className="text-red-500" /> Failed
                                         </span>
                                     ) : (
                                         <span className="px-3 py-1 rounded-full text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
-                                            <CheckCircle2 size={14} className="text-emerald-500"/> Passed
+                                            <CheckCircle2 size={14} className="text-emerald-500" /> Passed
                                         </span>
                                     )}
                                 </div>
@@ -207,7 +207,7 @@ export function TestRunDetailsPage() {
                                     (sr: any) => sr.status === 'FAILED'
                                 );
 
-                                const displayFailedStep = failedStep 
+                                const displayFailedStep = failedStep
                                     ? `${failedStep.testStep?.stepOrder || ''}. ${failedStep.testStep?.actionDescription || ''}`
                                     : "N/A (Global compilation/syntax error or setup failure)";
 
@@ -232,7 +232,7 @@ export function TestRunDetailsPage() {
                                                         <p className="text-gray-700 font-semibold">{displayFailedStep}</p>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex items-start gap-4">
                                                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
                                                         <Target size={16} className="text-blue-600" />
