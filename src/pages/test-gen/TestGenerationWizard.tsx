@@ -71,7 +71,7 @@ export const TestGenerationWizard = () => {
   const [isCreatingSuite, setIsCreatingSuite] = useState(false);
 
   // UI Exploration settings
-  const [baseUrl, setBaseUrl] = useState<string>('https://automationexercise.com');
+  const [baseUrl, setBaseUrl] = useState<string>('');
   const [enableUIExploration, setEnableUIExploration] = useState<boolean>(false);
   const [explorationStatus, setExplorationStatus] = useState<string>('');
 
@@ -81,6 +81,19 @@ export const TestGenerationWizard = () => {
         const req = res.content?.find((r: Requirement) => r.id === reqId);
         if (req) setRequirement(req);
       });
+
+      // Auto-fetch default environment URL for the project
+      import('@/features/project/api/environments.api')
+        .then(({ environmentsApi }) => {
+          environmentsApi.getEnvironmentsByProject(projectId).then((envs) => {
+            const validEnvs = envs.filter(e => e.baseUrl && e.baseUrl.trim() !== '');
+            const defaultEnv = validEnvs.find(e => e.isDefault) || validEnvs[0];
+            if (defaultEnv && defaultEnv.baseUrl) {
+              setBaseUrl(defaultEnv.baseUrl);
+            }
+          });
+        })
+        .catch((err) => console.error('Failed to auto-fetch environment base URL:', err));
     }
   }, [projectId, reqId]);
 
@@ -131,6 +144,10 @@ export const TestGenerationWizard = () => {
   }, [reqId]);
 
   const handleGenerate = async () => {
+    if (!baseUrl || !baseUrl.trim()) {
+      alert('Please enter a Base URL before generating.');
+      return;
+    }
     setIsGenerating(true);
     setExplorationStatus('');
     try {

@@ -29,6 +29,10 @@ export interface TestCase {
   priority?: string;
   requirementId?: string;
   expectedResult?: string;
+  actualResult?: string;
+  steps?: any[];
+  testData?: any[];
+  scripts?: any[];
 }
 
 export const testCaseApi = {
@@ -104,6 +108,26 @@ export const testCaseApi = {
       data
     );
     return response.data;
+  },
+
+  createTestData: async (
+    testCaseId: number,
+    data: { dataName: string; inputData?: any; expectedData?: any }
+  ): Promise<any> => {
+    const response = await httpClient.post(
+      `/core-managerment-service/api/test-cases/${testCaseId}/test-data`,
+      data
+    );
+    return response.data;
+  },
+
+  deleteTestData: async (
+    testCaseId: number,
+    testDataId: number
+  ): Promise<void> => {
+    await httpClient.delete(
+      `/core-managerment-service/api/test-cases/${testCaseId}/test-data/${testDataId}`
+    );
   },
 
   updateScript: async (

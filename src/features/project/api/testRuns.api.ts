@@ -32,6 +32,11 @@ export interface TestRunItem {
     durationMs: number;
     screenshotUrl?: string;
     videoUrl?: string;
+    testDataSnapshot?: string;
+    testScriptSnapshot?: string;
+    testStepsSnapshot?: string;
+    testSnapShot?: string;
+    finalScreenshotUrl?: string;
     testResult?: TestResult;
 }
 
@@ -62,8 +67,18 @@ export const testRunApi = {
         return response.data;
     },
     
+    getRunsBySuite: async (suiteId: number): Promise<TestRun[]> => {
+        const response = await httpClient.get(`/core-managerment-service/api/v1/test-suites/${suiteId}/runs`);
+        return response.data;
+    },
+    
     getRunDetails: async (runId: number): Promise<TestRun> => {
         const response = await httpClient.get(`/core-managerment-service/api/v1/test-runs/${runId}`);
+        return response.data;
+    },
+
+    createTestRun: async (data: { suiteId: number; projectId: string; environment: string }): Promise<TestRun> => {
+        const response = await httpClient.post('/core-managerment-service/api/v1/test-runs', data);
         return response.data;
     }
 };
