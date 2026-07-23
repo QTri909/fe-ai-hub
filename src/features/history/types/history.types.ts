@@ -50,24 +50,44 @@ export interface RecentActivity {
 // ─── GET /api/v1/history/testcase/{testCaseId}/runs ─────────────────────
 
 export interface TestCaseStepResult {
-  stepOrder: number;
-  actionDescription: string;
-  expectedResult: string;
+  stepResultId: number;
+  stepId: number;
+  stepDescription: string;
   actualResult: string;
-  status: 'PASSED' | 'FAILED' | 'SKIPPED' | 'BLOCKED';
+  status: string;
+  executionTime: string;
+  screenshotUrl: string | null;
+  videoUrl: string | null;
 }
 
 export interface TestCaseRunResult {
-  status: 'PASSED' | 'FAILED' | 'PARTIALLY_PASSED' | 'ERROR' | 'SKIPPED';
+  resultId: number;
+  status: string;
   actualResult: string;
+  executionLog: string;
+  startTime: string;
+  endTime: string;
+  durationMs: number;
+  createdAt: string;
   stepResults: TestCaseStepResult[];
 }
 
 export interface TestCaseRun {
-  runId: number;
-  itemStatus: 'PASSED' | 'FAILED';
+  runItemId: number;
+  runId: number | null;
+  runStatus: string | null;
+  suiteId: number | null;
+  suiteName: string | null;
+  environment: string | null;
+  itemStatus: string;
   executionTime: string;
-  environment: 'QA' | 'STAGING';
+  durationMs: number;
+  screenshotUrl: string | null;
+  videoUrl: string | null;
+  testDataSnapshot?: string;
+  testScriptSnapshot?: string;
+  testStepsSnapshot?: string;
+  finalScreenshotUrl?: string;
   result?: TestCaseRunResult;
 }
 
@@ -75,5 +95,6 @@ export interface TestCaseRunHistoryResponse {
   testCaseId: number;
   testCaseCode: string;
   title: string;
+  expectedResult?: string;
   runHistory: TestCaseRun[];
 }

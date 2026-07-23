@@ -104,14 +104,19 @@ export const WorkspacePage = () => {
           </div>
         )}
 
-        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-6" onSubmit={(e) => e.preventDefault()} autoComplete="off">
+          {/* Dummy hidden inputs to prevent browser password manager autofill */}
+          <input type="text" style={{ display: 'none' }} tabIndex={-1} readOnly />
+          <input type="password" style={{ display: 'none' }} tabIndex={-1} readOnly />
+
           {/* Workspace Name */}
           <div className="space-y-1">
             <label className="font-label-md text-label-md text-on-surface-variant ml-1">Workspace Name</label>
             <input 
-              className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface placeholder:text-outline focus:outline-none focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all" 
-              placeholder="e.g., First workspace" 
+              className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface focus:outline-none focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all" 
               type="text"
+              name="ws_name_no_autofill"
+              autoComplete="off"
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
             />
@@ -123,9 +128,10 @@ export const WorkspacePage = () => {
             <div className="flex items-stretch border border-outline-variant rounded-lg bg-surface-container-low overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
               <span className="flex items-center px-4 border-r border-outline-variant text-outline font-code text-code bg-surface-container">https://</span>
               <input 
-                className="flex-grow bg-transparent border-none px-4 py-2 text-on-surface focus:ring-0 placeholder:text-outline font-code text-code" 
-                placeholder="your-site" 
+                className="flex-grow bg-transparent border-none px-4 py-2 text-on-surface focus:ring-0 font-code text-code" 
                 type="text"
+                name="ws_jira_site_no_autofill"
+                autoComplete="off"
                 value={jiraSite}
                 onChange={(e) => setJiraSite(e.target.value)}
               />
@@ -137,9 +143,10 @@ export const WorkspacePage = () => {
           <div className="space-y-1">
             <label className="font-label-md text-label-md text-on-surface-variant ml-1">Atlassian Email Address</label>
             <input 
-              className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface placeholder:text-outline focus:outline-none focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all" 
-              placeholder="name@company.com" 
+              className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface focus:outline-none focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all" 
               type="email"
+              name="ws_email_no_autofill"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -150,9 +157,10 @@ export const WorkspacePage = () => {
             <label className="font-label-md text-label-md text-on-surface-variant ml-1">Jira API Token</label>
             <div className="relative">
               <input 
-                className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface placeholder:text-outline focus:outline-none focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all pr-12" 
-                placeholder="••••••••••••••••" 
+                className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface focus:outline-none focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all pr-12" 
                 type={showToken ? "text" : "password"}
+                name="ws_token_no_autofill"
+                autoComplete="new-password"
                 value={apiToken}
                 onChange={(e) => setApiToken(e.target.value)}
               />

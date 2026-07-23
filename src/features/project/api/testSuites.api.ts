@@ -42,8 +42,8 @@ export const testSuiteApi = {
     return response.data;
   },
 
-  executeTestSuite: async (suiteId: number, baseUrl?: string): Promise<any> => {
-    const response = await httpClient.post(`/execution-engine-service/api/execution/run-suite`, { suiteId, baseUrl });
+  executeTestSuite: async (suiteId: number, baseUrl?: string, runId?: number): Promise<any> => {
+    const response = await httpClient.post(`/execution-engine-service/api/execution/run-suite`, { suiteId, baseUrl, runId });
     return response.data;
   },
 

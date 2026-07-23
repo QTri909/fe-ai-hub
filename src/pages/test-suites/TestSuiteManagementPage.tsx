@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Plus, Edit, Trash2, X, ChevronDown, ChevronRight, Loader2, CheckCircle2, Play } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
+import { testRunApi } from '@/features/project/api/testRuns.api';
 import { httpClient } from '@/infrastructure/http/client';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 export interface TestCaseDetails {
   testCaseId?: number;
@@ -44,6 +47,86 @@ export const TestSuiteManagementPage = () => {
   const [tcDetails, setTcDetails] = useState<{steps: TestStep[], data: unknown[]}>({ steps: [], data: [] });
   const [isLoadingTcDetails, setIsLoadingTcDetails] = useState(false);
 
+  const navigate = useNavigate();
+
+  // Test runs history state
+  const [testRuns, setTestRuns] = useState<any[]>([]);
+  const [isLoadingRuns, setIsLoadingRuns] = useState(false);
+
+  // WebSocket Live Logs states
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [liveLogs, setLiveLogs] = useState<string[]>([]);
+  const [isExecutingSuite, setIsExecutingSuite] = useState<TestSuite | null>(null);
+  const stompClientRef = useRef<Client | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [liveLogs]);
+
+  const fetchTestRuns = async () => {
+    if (!projectId) return;
+    try {
+      setIsLoadingRuns(true);
+      const data = await testRunApi.getRunsByProject(projectId);
+      setTestRuns(data || []);
+    } catch (error) {
+      console.error('Failed to fetch test runs:', error);
+    } finally {
+      setIsLoadingRuns(false);
+    }
+  };
+
+  useEffect(() => {
+    if (projectId) {
+      fetchTestRuns();
+    }
+  }, [projectId]);
+
+  const connectToWebSocket = (runId: number) => {
+    const socketUrl = 'http://localhost:8080/ws-execution';
+    const topic = `/topic/test-run/${runId}`;
+    
+    setLiveLogs(['🔌 Connecting to execution engine...']);
+    
+    const client = new Client({
+      webSocketFactory: () => new SockJS(socketUrl),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        setLiveLogs(prev => [...prev, `✅ Connected. Listening for logs...`]);
+        client.subscribe(topic, (message) => {
+          setLiveLogs(prev => [...prev, message.body]);
+        });
+      },
+      onStompError: (frame) => {
+        setLiveLogs(prev => [...prev, `❌ WebSocket Error: ${frame.headers['message']}`]);
+      },
+      onWebSocketClose: () => {
+        setLiveLogs(prev => [...prev, `🔌 Connection closed.`]);
+      }
+    });
+
+    client.activate();
+    stompClientRef.current = client;
+  };
+
+  const disconnectWebSocket = () => {
+    if (stompClientRef.current) {
+      stompClientRef.current.deactivate();
+      stompClientRef.current = null;
+    }
+  };
+
+  const closeLogsModal = () => {
+    setIsLogsModalOpen(false);
+    disconnectWebSocket();
+  };
+
   const fetchSuites = useCallback(async () => {
     if (!projectId) return;
     try {
@@ -81,15 +164,59 @@ export const TestSuiteManagementPage = () => {
   };
 
   const handleRunTests = async (suiteId: number) => {
-    const baseUrl = window.prompt("Enter base URL to run tests against:", "https://example.com") || "";
-    if (!baseUrl) return;
+    let baseUrl = '';
+    if (projectId) {
+      try {
+        const { environmentsApi } = await import('@/features/project/api/environments.api');
+        const envs = await environmentsApi.getEnvironmentsByProject(projectId);
+        const validEnvs = envs.filter(e => e.baseUrl && e.baseUrl.trim() !== '');
+        const defaultEnv = validEnvs.find(e => e.isDefault) || validEnvs[0];
+        if (defaultEnv && defaultEnv.baseUrl) {
+          baseUrl = defaultEnv.baseUrl;
+        }
+      } catch (err) {
+        console.error('Failed to auto-fetch environment base URL:', err);
+      }
+    }
+
+    if (!baseUrl) {
+      baseUrl = window.prompt("Enter base URL to run tests against:", "") || "";
+    }
+    if (!baseUrl.trim()) {
+      alert("Base URL is required to run tests.");
+      return;
+    }
+    
+    const suite = suites.find(s => s.suiteId === suiteId);
     
     try {
-      await testSuiteApi.executeTestSuite(suiteId, baseUrl);
-      alert("Test execution started! Check the Test Runs page for results.");
-    } catch (error) {
+      setIsExecutingSuite(suite || null);
+      setIsLogsModalOpen(true);
+      
+      // 1. Create a TestRun entity first to obtain a unique runId
+      const runRes = await httpClient.post('/core-managerment-service/api/v1/test-runs', {
+        suiteId,
+        projectId,
+        environment: baseUrl
+      });
+      const runId = runRes.data.runId;
+      
+      // 2. Connect WebSocket
+      connectToWebSocket(runId);
+      
+      // 3. Trigger execution on the backend
+      const response = await testSuiteApi.executeTestSuite(suiteId, baseUrl, runId);
+      
+      setLiveLogs(prev => [...prev, `\n✅ Execution finished. Status: ${response.status}. Passed: ${response.passed}/${response.total}`]);
+      
+      // Refresh suites and runs
+      await fetchSuites();
+      await fetchTestRuns();
+    } catch (error: any) {
       console.error('Failed to run tests', error);
-      alert('Failed to run tests. See console for details.');
+      setLiveLogs(prev => [...prev, `\n🚨 Failed to run test suite: ${error.response?.data?.message || error.message}`]);
+    } finally {
+      setIsExecutingSuite(null);
     }
   };
 
@@ -331,6 +458,57 @@ export const TestSuiteManagementPage = () => {
                           ) : (
                             <div className="text-gray-500 text-sm py-2">No test cases assigned to this suite yet.</div>
                           )}
+
+                          {/* Suite Execution History */}
+                          <div className="mt-6 pt-6 border-t border-gray-800">
+                            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">Suite Execution History</h3>
+                            {isLoadingRuns ? (
+                              <div className="text-sm text-gray-500">Loading history...</div>
+                            ) : (
+                              (() => {
+                                const suiteRuns = testRuns.filter(r => r.testSuite?.suiteId === suite.suiteId);
+                                if (suiteRuns.length === 0) {
+                                  return <div className="text-gray-500 text-sm py-2">No execution runs recorded for this suite.</div>;
+                                }
+                                return (
+                                  <div className="overflow-x-auto rounded-lg border border-gray-800">
+                                    <table className="w-full text-left text-sm text-gray-300">
+                                      <thead className="bg-gray-950 text-xs font-semibold text-gray-400 uppercase border-b border-gray-800">
+                                        <tr>
+                                          <th className="py-2.5 px-4">Run ID</th>
+                                          <th className="py-2.5 px-4">Environment</th>
+                                          <th className="py-2.5 px-4 text-center">Total</th>
+                                          <th className="py-2.5 px-4 text-center">Passed</th>
+                                          <th className="py-2.5 px-4 text-center">Failed</th>
+                                          <th className="py-2.5 px-4">Status</th>
+                                          <th className="py-2.5 px-4">Started At</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-800 text-xs text-gray-300">
+                                        {suiteRuns.map(run => (
+                                          <tr key={run.runId} className="hover:bg-gray-800/40 transition cursor-pointer" onClick={() => navigate(`/projects/${projectId}/test-runs/${run.runId}`)}>
+                                            <td className="py-3 px-4 font-bold text-indigo-400">RUN-{run.runId.toString().padStart(3, '0')}</td>
+                                            <td className="py-3 px-4 font-mono text-[10px]">{run.environment}</td>
+                                            <td className="py-3 px-4 text-center">{run.totalTests || 0}</td>
+                                            <td className="py-3 px-4 text-center text-emerald-400 font-bold">{run.passedCount || 0}</td>
+                                            <td className="py-3 px-4 text-center text-red-400 font-bold">{run.failedCount || 0}</td>
+                                            <td className="py-3 px-4">
+                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                run.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                              }`}>
+                                                {run.status}
+                                              </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-400">{new Date(run.startTime).toLocaleString()}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                );
+                              })()
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -522,6 +700,65 @@ export const TestSuiteManagementPage = () => {
                 ) : (
                   'Generate'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Live Logs Modal */}
+      {isLogsModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="flex h-full max-h-[80vh] w-full max-w-4xl flex-col rounded-xl border border-gray-800 bg-gray-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900 p-4 rounded-t-xl">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Play size={18} className="text-indigo-400" />
+                Live Execution Logs - Suite: {isExecutingSuite?.suiteName}
+              </h3>
+              <button
+                type="button"
+                onClick={closeLogsModal}
+                className="rounded text-gray-400 hover:bg-gray-800 hover:text-white p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto bg-[#0d1117] p-4 font-mono text-sm text-gray-300">
+              {liveLogs.length === 0 ? (
+                <div className="animate-pulse text-gray-500">Waiting for logs...</div>
+              ) : (
+                liveLogs.map((log, index) => {
+                  let colorClass = "text-gray-300";
+                  if (log.includes("✅") || log.includes("PASSED") || log.includes("passed")) colorClass = "text-emerald-400";
+                  if (log.includes("❌") || log.includes("🚨") || log.includes("FAILED") || log.includes("Error")) colorClass = "text-red-400";
+                  if (log.includes("ℹ️") || log.includes("INFO")) colorClass = "text-blue-400";
+                  if (log.includes("WARN")) colorClass = "text-yellow-400";
+                  if (log.includes("[STEP]")) colorClass = "text-indigo-300 font-semibold";
+                  
+                  return (
+                    <div key={index} className={`mb-1 whitespace-pre-wrap break-words ${colorClass}`}>
+                      {log}
+                    </div>
+                  );
+                })
+              )}
+              <div ref={logsEndRef} />
+            </div>
+            
+            <div className="border-t border-gray-800 bg-gray-900 p-4 rounded-b-xl flex justify-between items-center">
+              <div className="text-xs text-gray-500 flex items-center gap-2">
+                {isExecutingSuite ? (
+                  <><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span> Test is running...</>
+                ) : (
+                  <><span className="h-2 w-2 rounded-full bg-emerald-500"></span> Execution finished.</>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={closeLogsModal}
+                className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+              >
+                Close
               </button>
             </div>
           </div>
