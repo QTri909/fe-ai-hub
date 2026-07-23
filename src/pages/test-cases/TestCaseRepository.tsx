@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import { historyApi } from '@/features/history/api/history.api';
 
 // Helper to format steps to Gherkin
 const formatStepsToGherkin = (steps: any[]): string => {
@@ -18,7 +21,7 @@ const formatStepsToGherkin = (steps: any[]): string => {
   }).join('\n');
 };
 
-import { Search, Filter, Play, Trash, Code, Edit3, Save, X } from 'lucide-react';
+import { Search, Filter, Play, Trash, Code, Edit3, Save, X, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testCaseApi, type TestCase } from '@/features/project/api/testCases.api';
 import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.api';
@@ -26,7 +29,7 @@ import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.
 export const TestCaseRepository = () => {
   const navigate = useNavigate();
   const [selectedTc, setSelectedTc] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'steps' | 'data' | 'script'>('steps');
+  const [activeTab, setActiveTab] = useState<'steps' | 'data' | 'script' | 'history'>('steps');
 
   const { id: reqId, projectId } = useParams<{ id: string; projectId: string }>();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -70,6 +73,134 @@ export const TestCaseRepository = () => {
   // Generate Script modal state
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [generateBaseUrl, setGenerateBaseUrl] = useState('');
+
+  // Real-time Logs state
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [liveLogs, setLiveLogs] = useState<string[]>([]);
+  const stompClientRef = useRef<Client | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [liveLogs]);
+
+  // Multiple Test Data matrix states
+  const [isCreatingData, setIsCreatingData] = useState(false);
+  const [newDataForm, setNewDataForm] = useState({
+    dataName: '',
+    inputData: '',
+    expectedData: ''
+  });
+
+  // TestCase history states
+  const [tcHistory, setTcHistory] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  const fetchHistory = async () => {
+    if (!selectedTc) return;
+    try {
+      setIsLoadingHistory(true);
+      const data = await historyApi.getTestCaseRunHistory(selectedTc.testCaseId);
+      setTcHistory(data?.runHistory || []);
+    } catch (error) {
+      console.error('Failed to fetch test case history:', error);
+      setTcHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history' && selectedTc) {
+      fetchHistory();
+    }
+  }, [activeTab, selectedTc]);
+
+  const handleOpenAddDataModal = () => {
+    setNewDataForm({
+      dataName: '',
+      inputData: '{\n  \n}',
+      expectedData: '{\n  \n}'
+    });
+    setIsCreatingData(true);
+  };
+
+  const handleSaveNewData = async () => {
+    if (!selectedTc) return;
+    try {
+      const parseJsonValue = (value: string) => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      };
+
+      await testCaseApi.createTestData(selectedTc.testCaseId, {
+        dataName: newDataForm.dataName,
+        inputData: parseJsonValue(newDataForm.inputData),
+        expectedData: parseJsonValue(newDataForm.expectedData)
+      });
+
+      setIsCreatingData(false);
+      await refreshDetails();
+    } catch (error) {
+      console.error('Failed to create test data:', error);
+      alert('Failed to create test data.');
+    }
+  };
+
+  const handleDeleteData = async (testDataId: number) => {
+    if (!selectedTc) return;
+    if (!window.confirm('Are you sure you want to delete this test data?')) return;
+    try {
+      await testCaseApi.deleteTestData(selectedTc.testCaseId, testDataId);
+      await refreshDetails();
+    } catch (error) {
+      console.error('Failed to delete test data:', error);
+      alert('Failed to delete test data.');
+    }
+  };
+
+  const connectToWebSocket = (testCaseId: number) => {
+    const socketUrl = 'http://localhost:8080/ws-execution';
+    const runIdStr = `run-single-${testCaseId}`;
+    const topic = `/topic/test-run/${runIdStr}`;
+    
+    setLiveLogs(['🔌 Connecting to execution engine...']);
+    
+    const client = new Client({
+      webSocketFactory: () => new SockJS(socketUrl),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        setLiveLogs(prev => [...prev, `✅ Connected. Listening for logs...`]);
+        client.subscribe(topic, (message) => {
+          setLiveLogs(prev => [...prev, message.body]);
+        });
+      },
+      onStompError: (frame) => {
+        setLiveLogs(prev => [...prev, `❌ WebSocket Error: ${frame.headers['message']}`]);
+      },
+      onWebSocketClose: () => {
+        setLiveLogs(prev => [...prev, `🔌 Connection closed.`]);
+      }
+    });
+
+    client.activate();
+    stompClientRef.current = client;
+  };
+
+  const disconnectWebSocket = () => {
+    if (stompClientRef.current) {
+      stompClientRef.current.deactivate();
+      stompClientRef.current = null;
+    }
+  };
 
   React.useEffect(() => {
     const fetchTestCases = async () => {
@@ -375,36 +506,60 @@ const newSuite = await testSuiteApi.createTestSuite({
       return;
     }
 
-    const baseUrl =
-      window.prompt('Enter base URL to run tests against:', 'https://example.com') || '';
-    if (!baseUrl) return;
+    let baseUrl = '';
+    if (projectId) {
+      try {
+        const { environmentsApi } = await import('@/features/project/api/environments.api');
+        const envs = await environmentsApi.getEnvironmentsByProject(projectId);
+        const validEnvs = envs.filter(e => e.baseUrl && e.baseUrl.trim() !== '');
+        const defaultEnv = validEnvs.find(e => e.isDefault) || validEnvs[0];
+        if (defaultEnv && defaultEnv.baseUrl) {
+          baseUrl = defaultEnv.baseUrl;
+        }
+      } catch (err) {
+        console.error('Failed to auto-fetch environment base URL:', err);
+      }
+    }
+
+    if (!baseUrl) {
+      baseUrl = window.prompt('Enter base URL to run tests against:', '') || '';
+    }
+    if (!baseUrl.trim()) {
+      alert('Base URL is required to run tests.');
+      return;
+    }
 
     try {
       setIsGeneratingScript(true);
+      setIsLogsModalOpen(true);
+      connectToWebSocket(selectedTc.testCaseId);
+      
       const response = await testCaseApi.executeScript(selectedTc.testCaseId, baseUrl);
 
       // Luôn luôn refresh dữ liệu để cập nhật script/URL mới từ DB trước khi bung thông báo chặn UI
       await refreshDetails();
 
       if (response.passed) {
-        alert('Test passed successfully! Duration: ' + response.executionTime + 'ms');
+        setLiveLogs(prev => [...prev, `\n✅ Test passed successfully! Duration: ${response.executionTime}ms`]);
       } else {
-        let msg =
-          'Test failed after ' +
-          response.attempts +
-          ' attempts. Error: ' +
-          (response.errorMessage || 'Unknown');
+        let msg = `\n❌ Test failed after ${response.attempts || 1} attempts. Error: ${response.errorMessage || 'Unknown'}`;
         if (response.scriptUpdated) {
-          msg += '\n\nScript has been auto-updated (Check the latest script code!).';
+          msg += '\n\n🔄 Script has been auto-updated (Check the latest script code!).';
         }
-        alert(msg);
+        setLiveLogs(prev => [...prev, msg]);
       }
     } catch (error: any) {
       console.error('Failed to run script:', error);
-      alert('Failed to run script: ' + (error.response?.data?.message || error.message));
+      setLiveLogs(prev => [...prev, `\n🚨 Failed to run script: ${error.response?.data?.message || error.message}`]);
     } finally {
       setIsGeneratingScript(false);
+      disconnectWebSocket();
     }
+  };
+
+  const closeLogsModal = () => {
+    setIsLogsModalOpen(false);
+    disconnectWebSocket();
   };
 
   return (
@@ -578,13 +733,15 @@ const newSuite = await testSuiteApi.createTestSuite({
                 {/* Tabs + Generate/Run Script Button */}
                 <div className="flex items-center justify-between border-b border-gray-800">
                   <div className="flex gap-4">
-                    {['steps', 'data', 'script'].map((tab) => {
+                    {['steps', 'data', 'script', 'history'].map((tab) => {
                       const label =
                         tab === 'steps'
                           ? 'Test steps'
                           : tab === 'data'
                             ? 'Test data'
-                            : 'Test script';
+                            : tab === 'script'
+                              ? 'Test script'
+                              : 'Execution history';
                       return (
                         <button
                           key={tab}
@@ -747,6 +904,70 @@ const newSuite = await testSuiteApi.createTestSuite({
                     )}
                     {activeTab === 'data' && (
                       <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
+                        <div className="mb-4 flex justify-end">
+                          <button
+                            onClick={handleOpenAddDataModal}
+                            className="flex items-center gap-1 rounded bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-indigo-700 cursor-pointer"
+                          >
+                            <Plus size={14} /> Add Test Data
+                          </button>
+                        </div>
+
+                        {isCreatingData && (
+                          <div className="mb-4 rounded-lg border border-indigo-850/40 bg-indigo-950/10 p-3 space-y-2">
+                            <div className="text-xs font-bold text-indigo-400">New Test Data Matrix Row</div>
+                            <input
+                              value={newDataForm.dataName}
+                              onChange={(e) =>
+                                setNewDataForm({
+                                  ...newDataForm,
+                                  dataName: e.target.value,
+                                })
+                              }
+                              placeholder="Data Name (e.g. valid credentials)"
+                              className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm text-white"
+                            />
+                            <textarea
+                              value={newDataForm.inputData}
+                              onChange={(e) =>
+                                setNewDataForm({
+                                  ...newDataForm,
+                                  inputData: e.target.value,
+                                })
+                              }
+                              placeholder='Input Data JSON (e.g. {"username": "user1"})'
+                              className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 font-mono text-sm text-white"
+                              rows={4}
+                            />
+                            <textarea
+                              value={newDataForm.expectedData}
+                              onChange={(e) =>
+                                setNewDataForm({
+                                  ...newDataForm,
+                                  expectedData: e.target.value,
+                                })
+                              }
+                              placeholder='Expected Data JSON (e.g. {"status": "success"})'
+                              className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 font-mono text-sm text-white"
+                              rows={4}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleSaveNewData}
+                                className="flex items-center gap-1 rounded bg-emerald-600 px-3 py-1 text-xs text-white"
+                              >
+                                <Save size={12} /> Save
+                              </button>
+                              <button
+                                onClick={() => setIsCreatingData(false)}
+                                className="flex items-center gap-1 rounded bg-gray-700 px-3 py-1 text-xs text-white"
+                              >
+                                <X size={12} /> Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {testData.length > 0 ? (
                           testData.map((data: any) => {
                             const isEditing =
@@ -813,13 +1034,22 @@ const newSuite = await testSuiteApi.createTestSuite({
                                           {data.dataName}
                                         </div>
                                       )}
-                                      <button
-                                        onClick={() => startDataEdit(data)}
-                                        className="p-1 text-indigo-400 hover:text-indigo-300"
-                                        aria-label="Edit data"
-                                      >
-                                        <Edit3 size={14} />
-                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => startDataEdit(data)}
+                                          className="p-1 text-indigo-400 hover:text-indigo-300 transition"
+                                          aria-label="Edit data"
+                                        >
+                                          <Edit3 size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteData(data.testDataId)}
+                                          className="p-1 text-red-400 hover:text-red-300 transition"
+                                          aria-label="Delete data"
+                                        >
+                                          <Trash size={14} />
+                                        </button>
+                                      </div>
                                     </div>
                                     <pre className="max-h-48 overflow-auto font-mono text-sm text-emerald-400">
                                       {data.inputData}
@@ -918,6 +1148,46 @@ const newSuite = await testSuiteApi.createTestSuite({
                           <div className="text-sm text-gray-500">
                             No script generated for this test case.
                           </div>
+                        )}
+                      </div>
+                    )}
+                    {activeTab === 'history' && (
+                      <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
+                        {isLoadingHistory ? (
+                          <div className="text-sm text-gray-500">Loading history...</div>
+                        ) : tcHistory && tcHistory.length > 0 ? (
+                          <div className="overflow-x-auto rounded-lg border border-gray-800">
+                            <table className="w-full text-left text-sm text-gray-300">
+                              <thead className="border-b border-gray-800 bg-gray-900 text-xs text-gray-400 uppercase">
+                                <tr>
+                                  <th className="px-4 py-2">Run ID</th>
+                                  <th className="px-4 py-2">Environment</th>
+                                  <th className="px-4 py-2">Status</th>
+                                  <th className="px-4 py-2">Execution Time</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {tcHistory.map((run) => (
+                                  <tr key={run.runId} className="border-b border-gray-800 bg-gray-950 last:border-0 hover:bg-gray-800/50">
+                                    <td className="px-4 py-3 font-bold text-indigo-400">RUN-{run.runId}</td>
+                                    <td className="px-4 py-3">{run.environment || 'STAGING'}</td>
+                                    <td className="px-4 py-3">
+                                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                        run.itemStatus === 'PASSED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                      }`}>
+                                        {run.itemStatus}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-gray-400">
+                                      {new Date(run.executionTime).toLocaleString()}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">No execution history found for this test case.</div>
                         )}
                       </div>
                     )}
@@ -1079,6 +1349,63 @@ const newSuite = await testSuiteApi.createTestSuite({
                 className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isGeneratingScript ? 'Generating...' : 'Generate Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Live Logs Modal */}
+      {isLogsModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="flex h-full max-h-[80vh] w-full max-w-4xl flex-col rounded-xl border border-gray-800 bg-gray-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900 p-4 rounded-t-xl">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Play size={18} className="text-indigo-400" />
+                Live Execution Logs - {selectedTc?.testCaseCode}
+              </h3>
+              <button
+                onClick={closeLogsModal}
+                className="rounded text-gray-400 hover:bg-gray-800 hover:text-white p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto bg-[#0d1117] p-4 font-mono text-sm text-gray-300">
+              {liveLogs.length === 0 ? (
+                <div className="animate-pulse text-gray-500">Waiting for logs...</div>
+              ) : (
+                liveLogs.map((log, index) => {
+                  let colorClass = "text-gray-300";
+                  if (log.includes("✅") || log.includes("PASSED") || log.includes("passed")) colorClass = "text-emerald-400";
+                  if (log.includes("❌") || log.includes("🚨") || log.includes("FAILED") || log.includes("Error")) colorClass = "text-red-400";
+                  if (log.includes("ℹ️") || log.includes("INFO")) colorClass = "text-blue-400";
+                  if (log.includes("WARN")) colorClass = "text-yellow-400";
+                  if (log.includes("[STEP]")) colorClass = "text-indigo-300 font-semibold";
+                  
+                  return (
+                    <div key={index} className={`mb-1 whitespace-pre-wrap break-words ${colorClass}`}>
+                      {log}
+                    </div>
+                  );
+                })
+              )}
+              <div ref={logsEndRef} />
+            </div>
+            
+            <div className="border-t border-gray-800 bg-gray-900 p-4 rounded-b-xl flex justify-between items-center">
+              <div className="text-xs text-gray-500 flex items-center gap-2">
+                {isGeneratingScript ? (
+                  <><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span> Test is running...</>
+                ) : (
+                  <><span className="h-2 w-2 rounded-full bg-emerald-500"></span> Execution finished.</>
+                )}
+              </div>
+              <button
+                onClick={closeLogsModal}
+                className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+              >
+                Close
               </button>
             </div>
           </div>
