@@ -5,6 +5,7 @@ import { testSuiteApi, type TestSuite } from '@/features/project/api/testSuites.
 import { testRunApi } from '@/features/project/api/testRuns.api';
 import { testCaseApi } from '@/features/project/api/testCases.api';
 import { httpClient } from '@/infrastructure/http/client';
+import { useAuthStore } from '@/core/store/auth.store';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
@@ -93,8 +94,14 @@ export const TestSuiteManagementPage = () => {
     const socketUrl = 'http://localhost:8080/ws-execution';
     const topic = `/topic/test-run/${runId}`;
     setLiveLogs(['🔌 Connecting to execution engine...']);
+    const accessToken = useAuthStore.getState().accessToken;
+    const connectHeaders: Record<string, string> = {};
+    if (accessToken) {
+      connectHeaders.Authorization = `Bearer ${accessToken}`;
+    }
     const client = new Client({
       webSocketFactory: () => new SockJS(socketUrl),
+      connectHeaders,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -346,12 +353,6 @@ export const TestSuiteManagementPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Test Suites</h1>
         <div className="flex gap-3">
-          <button
-            onClick={() => setIsAutoE2eModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-[0_0_15px_rgba(124,58,237,0.5)] transition-all hover:scale-105"
-          >
-            ✨ Ask AI (Auto E2E)
-          </button>
           <button
             onClick={handleOpenCreateModal}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
