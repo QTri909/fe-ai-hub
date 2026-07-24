@@ -206,9 +206,9 @@ const res = await testSuiteApi.executeTestSuite(suiteId, baseUrl || undefined);
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      className="form-checkbox h-5 w-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                      className="form-checkbox h-5 w-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 pointer-events-none"
                       checked={selectedSuiteIds.includes(suite.suiteId!)}
-                      onChange={() => handleToggleSuite(suite.suiteId!)}
+                      readOnly
                       disabled={isRunning}
                     />
                     <div>
