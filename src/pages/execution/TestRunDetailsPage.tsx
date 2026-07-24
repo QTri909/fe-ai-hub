@@ -80,17 +80,7 @@ export function TestRunDetailsPage() {
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition shadow-sm">
-                            <Bug size={18} className="text-blue-600" /> Create Jira Bug
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition shadow-sm">
-                            <RefreshCw size={18} className="text-blue-600" /> Sync Results to Jira
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition shadow-sm">
-                            <Download size={18} className="text-blue-600" /> Download Report
-                        </button>
-                    </div>
+
                 </div>
 
                 {/* Stat Cards */}

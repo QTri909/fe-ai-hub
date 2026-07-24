@@ -447,16 +447,7 @@ export const TestSuiteManagementPage = () => {
                           <div className="flex justify-between items-center mb-3">
                             <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider">Assigned Test Cases</h3>
                             <div className="flex gap-2">
-                              {!suite.isE2eFlow && (
-                                <button
-                                  onClick={() => handleLinkFlow(suite.suiteId)}
-                                  disabled={isLinkingFlow[suite.suiteId]}
-                                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition"
-                                >
-                                  {isLinkingFlow[suite.suiteId] ? <Loader2 size={16} className="animate-spin" /> : null}
-                                  Link as E2E Flow
-                                </button>
-                              )}
+
                               <button
                                 onClick={() => handleRunTests(suite.suiteId)}
                                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
